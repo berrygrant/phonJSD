@@ -1,2 +1,54 @@
 # phonJSD
+
 **phonJSD** is an R package for measuring phonological category separation using **Jensen–Shannon Divergence (JSD)**.  
+It is designed for researchers working in sociophonetics, laboratory phonology, bilingualism, and speech perception who need a principled, distributional metric of category overlap in acoustic space.
+
+Version **0.0.1** is an early research release focused on core functionality, transparency, and reproducibility.
+
+---
+
+## Motivation
+
+Traditional measures of phonological contrast (e.g., Euclidean distance between means, Pillai scores) capture only limited aspects of category structure.  
+**phonJSD** treats phonological categories as **probability distributions** in acoustic space and quantifies their separation using Jensen–Shannon Divergence—a symmetric, bounded, and interpretable information-theoretic metric.
+
+This approach is especially useful when:
+- Categories differ in **shape, variance, or multimodality**
+- Token counts are unbalanced
+- Category overlap is gradient rather than categorical
+- You want a measure that generalizes naturally to **multidimensional features** (e.g., MFCCs)
+
+---
+
+## Core Features (v0.0.1)
+
+- Jensen–Shannon Divergence for phonological category comparison  
+- Kernel density–based estimation of acoustic distributions  
+- Support for **1D and n-dimensional acoustic features**
+- Reproducible pipelines compatible with tidyverse workflows
+- Designed for integration with forced alignment and acoustic extraction tools
+
+---
+
+## Conceptual Overview
+
+Given two phonological categories (e.g., vowels /ɪ/ and /ɛ/), phonJSD:
+
+1. Represents each category as a probability distribution over acoustic space  
+2. Estimates densities using kernel density estimation (KDE)  
+3. Computes Jensen–Shannon Divergence between the distributions  
+
+JSD values:
+- **0** → complete overlap (no separation)
+- **Higher values** → greater distributional separation  
+- **Bounded and symmetric**, making cross-study comparisons more interpretable
+
+---
+
+## Installation
+
+This package is currently in early development and not yet on CRAN.
+
+```r
+# install.packages("remotes")
+remotes::install_github("YOUR_GITHUB_USERNAME/phonJSD")
