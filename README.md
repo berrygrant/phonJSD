@@ -51,4 +51,4 @@ This package is currently in early development and not yet on CRAN.
 
 ```r
 # install.packages("remotes")
-remotes::install_github("YOUR_GITHUB_USERNAME/phonJSD")
+remotes::install_github("berrygrant/phonJSD")
