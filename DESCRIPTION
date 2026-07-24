@@ -36,6 +36,7 @@ Imports:
 Suggests:
     ggplot2,
     mgcv,
+    mvtnorm,
     tuneR,
     testthat (>= 3.0.0),
     knitr,
