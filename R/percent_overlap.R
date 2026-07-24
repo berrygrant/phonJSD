@@ -32,8 +32,15 @@
 #'   \code{"mvnorm"} fits one multivariate normal per category and estimates the
 #'   overlapping coefficient between the two Gaussians by Monte-Carlo. Under
 #'   \code{"mvnorm"} the KDE-specific arguments (\code{bw}, \code{engine},
-#'   \code{eval_on}, \code{chunk_size}, \code{method}) do not apply;
-#'   \code{eval_n} / \code{eval_seed} still control evaluation-point subsampling.
+#'   \code{eval_on}, \code{chunk_size}, \code{method}, \code{eval_n}) do not
+#'   apply; the Monte-Carlo sample size is set by \code{mc_n} and
+#'   \code{eval_seed} makes the draw reproducible.
+#' @param mc_n Positive integer; number of Monte-Carlo samples drawn from each
+#'   fitted Gaussian when \code{density = "mvnorm"} (default \code{10000}). The
+#'   estimator draws \code{mc_n} fresh points from each category's fitted
+#'   Gaussian to estimate the overlapping coefficient between the two Gaussians.
+#'   Larger values reduce Monte-Carlo variance. Ignored when
+#'   \code{density = "kde"}.
 #' @param ... Reserved for future extensions; currently unused.
 #'
 #' @return Numeric scalar proportion in \code{[0, 1]}.
@@ -49,6 +56,7 @@ percent_overlap_kde <- function(data,
                                 chunk_size = 1000L,
                                 method = c("mc", "legacy"),
                                 density = c("kde", "mvnorm"),
+                                mc_n = 10000L,
                                 ...) {
 
   .validate_metric_inputs(data, features, category_col)
@@ -60,7 +68,7 @@ percent_overlap_kde <- function(data,
       data = data,
       features = features,
       category_col = category_col,
-      eval_n = eval_n,
+      mc_n = mc_n,
       eval_seed = eval_seed,
       metric = "percent_overlap_kde()"
     )
@@ -127,7 +135,15 @@ percent_overlap_kde <- function(data,
 #'   \code{"fast_diagonal"} is accepted as an alias for \code{"fast_diag"}.
 #' @param chunk_size Chunk size for \code{engine = "fast_diag"}.
 #' @param method Estimator passed to \code{percent_overlap_kde()}: \code{"mc"}
-#'   (default) or \code{"legacy"} (pre-1.2.0 self-normalized estimate).
+#'   (default) or \code{"legacy"} (pre-1.2.0 self-normalized estimate). Ignored
+#'   when \code{density = "mvnorm"}.
+#' @param density Density model passed to \code{percent_overlap_kde()}:
+#'   \code{"kde"} (default) or \code{"mvnorm"} (fit one multivariate normal per
+#'   category and estimate the overlapping coefficient between the two Gaussians
+#'   by Monte-Carlo).
+#' @param mc_n Positive integer; number of Monte-Carlo samples drawn from each
+#'   fitted Gaussian when \code{density = "mvnorm"} (default \code{10000}).
+#'   Ignored when \code{density = "kde"}.
 #' @param ... Additional arguments passed to \code{percent_overlap_kde()}.
 #'
 #' @return A tibble (global = one row; grouped = one per group) with
@@ -145,12 +161,15 @@ estimate_overlap <- function(data,
                              engine = c("ks", "fast_diag", "fast_diagonal"),
                              chunk_size = 1000L,
                              method = c("mc", "legacy"),
+                             density = c("kde", "mvnorm"),
+                             mc_n = 10000L,
                              ...) {
 
   bw <- match.arg(bw)
   eval_on <- match.arg(eval_on)
   engine <- .match_kde_engine(engine)
   method <- match.arg(method)
+  density <- match.arg(density)
   .check_positive_count(min_tokens, "min_tokens")
   .validate_metric_inputs(data, features, category_col, group_col)
 
@@ -174,6 +193,8 @@ estimate_overlap <- function(data,
       engine       = engine,
       chunk_size   = chunk_size,
       method       = method,
+      density      = density,
+      mc_n         = mc_n,
       ...
     )
 
@@ -209,6 +230,8 @@ estimate_overlap <- function(data,
         engine       = engine,
         chunk_size   = chunk_size,
         method       = method,
+        density      = density,
+        mc_n         = mc_n,
         ...
       ),
       error = function(e) NA_real_

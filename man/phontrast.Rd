@@ -23,7 +23,9 @@ phontrast(
   n_boot = 1000,
   conf_level = 0.95,
   progress = TRUE,
-  method = c("mc", "legacy")
+  method = c("mc", "legacy"),
+  density = c("kde", "mvnorm"),
+  mc_n = 10000L
 )
 }
 \arguments{
@@ -81,7 +83,22 @@ bootstrap resamples are running.}
 \item{method}{KDE estimator for the JSD and percent-overlap columns, passed
 to \code{jsd_kde_nd()}/\code{percent_overlap_kde()}: \code{"mc"} (default)
 for the Monte-Carlo plug-in, or \code{"legacy"} for the pre-1.2.0
-self-normalized estimate.}
+self-normalized estimate. Ignored when \code{density = "mvnorm"}.}
+
+\item{density}{Density model behind the two distributional metrics
+(Jensen-Shannon and proportional overlap): \code{"kde"} (default) estimates
+each category's density by kernel density estimation; \code{"mvnorm"} fits
+one multivariate normal per category and estimates those two metrics
+between the fitted Gaussians by Monte-Carlo. This lets the density estimator
+be matched to the same multivariate-normal assumptions the Pillai,
+Bhattacharyya, and Mahalanobis columns already make. The Pillai,
+Bhattacharyya, and Mahalanobis columns are parametric by construction and
+are unaffected by this argument.}
+
+\item{mc_n}{Positive integer; number of Monte-Carlo samples drawn from each
+fitted Gaussian for the Jensen-Shannon and overlap columns when
+\code{density = "mvnorm"} (default \code{10000}). Ignored when
+\code{density = "kde"}.}
 }
 \value{
 A data frame containing only the requested \code{metrics}. Wide

@@ -16,6 +16,7 @@ percent_overlap_kde(
   chunk_size = 1000L,
   method = c("mc", "legacy"),
   density = c("kde", "mvnorm"),
+  mc_n = 10000L,
   ...
 )
 }
@@ -57,8 +58,16 @@ estimates each category's density by kernel density estimation;
 \code{"mvnorm"} fits one multivariate normal per category and estimates the
 overlapping coefficient between the two Gaussians by Monte-Carlo. Under
 \code{"mvnorm"} the KDE-specific arguments (\code{bw}, \code{engine},
-\code{eval_on}, \code{chunk_size}, \code{method}) do not apply;
-\code{eval_n} / \code{eval_seed} still control evaluation-point subsampling.}
+\code{eval_on}, \code{chunk_size}, \code{method}, \code{eval_n}) do not
+apply; the Monte-Carlo sample size is set by \code{mc_n} and
+\code{eval_seed} makes the draw reproducible.}
+
+\item{mc_n}{Positive integer; number of Monte-Carlo samples drawn from each
+fitted Gaussian when \code{density = "mvnorm"} (default \code{10000}). The
+estimator draws \code{mc_n} fresh points from each category's fitted
+Gaussian to estimate the overlapping coefficient between the two Gaussians.
+Larger values reduce Monte-Carlo variance. Ignored when
+\code{density = "kde"}.}
 
 \item{...}{Reserved for future extensions; currently unused.}
 }

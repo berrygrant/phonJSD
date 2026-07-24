@@ -26,7 +26,14 @@
 #'   \code{"fast_diagonal"} is accepted as an alias for \code{"fast_diag"}.
 #' @param chunk_size Chunk size for \code{engine = "fast_diag"}.
 #' @param method Estimator passed to \code{jsd_kde_nd()}: \code{"mc"} (default)
-#'   or \code{"legacy"} (pre-1.2.0 self-normalized estimate).
+#'   or \code{"legacy"} (pre-1.2.0 self-normalized estimate). Ignored when
+#'   \code{density = "mvnorm"}.
+#' @param density Density model passed to \code{estimate_jsd()}: \code{"kde"}
+#'   (default) or \code{"mvnorm"} (fit one multivariate normal per category and
+#'   estimate JSD between the two Gaussians by Monte-Carlo).
+#' @param mc_n Positive integer; number of Monte-Carlo samples drawn from each
+#'   fitted Gaussian when \code{density = "mvnorm"} (default \code{10000}).
+#'   Ignored when \code{density = "kde"}.
 #' @param ... Additional arguments passed to \code{jsd_kde_nd()}.
 #'
 #' @return A one-row data frame with columns:
@@ -57,8 +64,12 @@ global_boot_jsd <- function(data,
                             engine = c("ks", "fast_diag", "fast_diagonal"),
                             chunk_size = 1000L,
                             method = c("mc", "legacy"),
+                            density = c("kde", "mvnorm"),
+                            mc_n = 10000L,
                             ...) {
 
+  method <- match.arg(method)
+  density <- match.arg(density)
   out <- estimate_jsd(
     data = data,
     features = features,
@@ -76,6 +87,8 @@ global_boot_jsd <- function(data,
     engine = engine,
     chunk_size = chunk_size,
     method = method,
+    density = density,
+    mc_n = mc_n,
     ...
   )
   out$scope <- NULL

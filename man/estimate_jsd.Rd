@@ -21,6 +21,8 @@ estimate_jsd(
   engine = c("ks", "fast_diag", "fast_diagonal"),
   chunk_size = 1000L,
   method = c("mc", "legacy"),
+  density = c("kde", "mvnorm"),
+  mc_n = 10000L,
   ...
 )
 }
@@ -61,7 +63,18 @@ into a labeled \code{group} value such as \code{"Sex=F | Style=read"}.}
 \item{method}{Estimator passed to \code{jsd_kde_nd()}: \code{"mc"} (default)
 for the Monte-Carlo plug-in estimate of the continuous JSD, or
 \code{"legacy"} to reproduce the pre-1.2.0 self-normalized sample-point
-estimate.}
+estimate. Ignored when \code{density = "mvnorm"}.}
+
+\item{density}{Density model behind the estimate, passed to
+\code{jsd_kde_nd()}: \code{"kde"} (default) estimates each category's
+density by kernel density estimation; \code{"mvnorm"} fits one multivariate
+normal per category and estimates the continuous JSD between the two
+Gaussians by Monte-Carlo. Under \code{"mvnorm"} the KDE-specific arguments
+do not apply and the Monte-Carlo sample size is set by \code{mc_n}.}
+
+\item{mc_n}{Positive integer; number of Monte-Carlo samples drawn from each
+fitted Gaussian when \code{density = "mvnorm"} (default \code{10000}).
+Ignored when \code{density = "kde"}.}
 
 \item{...}{Additional arguments passed to \code{jsd_kde_nd()} (e.g.,
 \code{loo}).}

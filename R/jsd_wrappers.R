@@ -30,7 +30,16 @@
 #' @param method Estimator passed to \code{jsd_kde_nd()}: \code{"mc"} (default)
 #'   for the Monte-Carlo plug-in estimate of the continuous JSD, or
 #'   \code{"legacy"} to reproduce the pre-1.2.0 self-normalized sample-point
-#'   estimate.
+#'   estimate. Ignored when \code{density = "mvnorm"}.
+#' @param density Density model behind the estimate, passed to
+#'   \code{jsd_kde_nd()}: \code{"kde"} (default) estimates each category's
+#'   density by kernel density estimation; \code{"mvnorm"} fits one multivariate
+#'   normal per category and estimates the continuous JSD between the two
+#'   Gaussians by Monte-Carlo. Under \code{"mvnorm"} the KDE-specific arguments
+#'   do not apply and the Monte-Carlo sample size is set by \code{mc_n}.
+#' @param mc_n Positive integer; number of Monte-Carlo samples drawn from each
+#'   fitted Gaussian when \code{density = "mvnorm"} (default \code{10000}).
+#'   Ignored when \code{density = "kde"}.
 #' @param ... Additional arguments passed to \code{jsd_kde_nd()} (e.g.,
 #'   \code{loo}).
 #'
@@ -91,12 +100,15 @@ estimate_jsd <- function(data,
                          engine = c("ks", "fast_diag", "fast_diagonal"),
                          chunk_size = 1000L,
                          method = c("mc", "legacy"),
+                         density = c("kde", "mvnorm"),
+                         mc_n = 10000L,
                          ...) {
 
   bw <- match.arg(bw)
   eval_on <- match.arg(eval_on)
   engine <- .match_kde_engine(engine)
   method <- match.arg(method)
+  density <- match.arg(density)
   .check_conf_level(conf_level)
   if (isTRUE(do_boot)) {
     .check_positive_count(n_boot, "n_boot")
@@ -130,6 +142,8 @@ estimate_jsd <- function(data,
       engine    = engine,
       chunk_size = chunk_size,
       method    = method,
+      density   = density,
+      mc_n      = mc_n,
       ...
     )
 
@@ -176,6 +190,8 @@ estimate_jsd <- function(data,
           engine    = engine,
           chunk_size = chunk_size,
           method    = method,
+          density   = density,
+          mc_n      = mc_n,
           ...
         ),
         error = function(e) NA_real_
@@ -236,6 +252,8 @@ estimate_jsd <- function(data,
     engine       = engine,
     chunk_size   = chunk_size,
     method       = method,
+    density      = density,
+    mc_n         = mc_n,
     ...
   ) |>
     dplyr::rename(jsd_point = "jsd")
@@ -277,6 +295,8 @@ estimate_jsd <- function(data,
     engine       = engine,
     chunk_size   = chunk_size,
     method       = method,
+    density      = density,
+    mc_n         = mc_n,
     ...
   )
 

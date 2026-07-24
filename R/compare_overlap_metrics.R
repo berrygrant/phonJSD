@@ -63,7 +63,20 @@
 #' @param method KDE estimator for the JSD and percent-overlap columns, passed
 #'   to \code{jsd_kde_nd()}/\code{percent_overlap_kde()}: \code{"mc"} (default)
 #'   for the Monte-Carlo plug-in, or \code{"legacy"} for the pre-1.2.0
-#'   self-normalized estimate.
+#'   self-normalized estimate. Ignored when \code{density = "mvnorm"}.
+#' @param density Density model behind the two distributional metrics
+#'   (Jensen-Shannon and proportional overlap): \code{"kde"} (default) estimates
+#'   each category's density by kernel density estimation; \code{"mvnorm"} fits
+#'   one multivariate normal per category and estimates those two metrics
+#'   between the fitted Gaussians by Monte-Carlo. This lets the density estimator
+#'   be matched to the same multivariate-normal assumptions the Pillai,
+#'   Bhattacharyya, and Mahalanobis columns already make. The Pillai,
+#'   Bhattacharyya, and Mahalanobis columns are parametric by construction and
+#'   are unaffected by this argument.
+#' @param mc_n Positive integer; number of Monte-Carlo samples drawn from each
+#'   fitted Gaussian for the Jensen-Shannon and overlap columns when
+#'   \code{density = "mvnorm"} (default \code{10000}). Ignored when
+#'   \code{density = "kde"}.
 #'
 #' @return A data frame containing only the requested \code{metrics}. Wide
 #'   output (the default) contains one column per requested metric plus
@@ -144,13 +157,16 @@ phontrast <- function(data,
                       n_boot = 1000,
                       conf_level = 0.95,
                       progress = TRUE,
-                      method = c("mc", "legacy")) {
+                      method = c("mc", "legacy"),
+                      density = c("kde", "mvnorm"),
+                      mc_n = 10000L) {
   output <- match.arg(output)
   metrics <- .resolve_contrast_metrics(metrics)
   bw <- match.arg(bw)
   eval_on <- match.arg(eval_on)
   engine <- .match_kde_engine(engine)
   method <- match.arg(method)
+  density <- match.arg(density)
   .check_positive_count(min_tokens, "min_tokens")
   .check_ridge_eps(eps, "eps")
   if (!is.logical(do_boot) || length(do_boot) != 1L || is.na(do_boot)) {
@@ -178,7 +194,9 @@ phontrast <- function(data,
     engine = engine,
     chunk_size = chunk_size,
     eps = eps,
-    method = method
+    method = method,
+    density = density,
+    mc_n = mc_n
   )
   if (!nrow(wide)) {
     .warn_empty_overlap_comparison(
@@ -208,7 +226,9 @@ phontrast <- function(data,
       n_boot = n_boot,
       conf_level = conf_level,
       progress = progress,
-      method = method
+      method = method,
+      density = density,
+      mc_n = mc_n
     )
     key_cols <- if (is.null(group_col)) c("scope", "n_tokens") else c("scope", "group", "n_tokens")
     wide <- dplyr::left_join(wide, boot, by = key_cols)
@@ -308,9 +328,13 @@ compare_overlap_metrics <- function(data,
                                     n_boot = 1000,
                                     conf_level = 0.95,
                                     progress = TRUE,
-                                    method = c("mc", "legacy")) {
+                                    method = c("mc", "legacy"),
+                                    density = c("kde", "mvnorm"),
+                                    mc_n = 10000L) {
   .Deprecated("phontrast")
   output <- match.arg(output)
+  method <- match.arg(method)
+  density <- match.arg(density)
   phontrast(
     data = data,
     features = features,
@@ -329,7 +353,9 @@ compare_overlap_metrics <- function(data,
     n_boot = n_boot,
     conf_level = conf_level,
     progress = progress,
-    method = method
+    method = method,
+    density = density,
+    mc_n = mc_n
   )
 }
 
@@ -345,11 +371,14 @@ compare_overlap_metrics <- function(data,
                                            engine = c("ks", "fast_diag", "fast_diagonal"),
                                            chunk_size = 1000L,
                                            eps = 1e-6,
-                                           method = c("mc", "legacy")) {
+                                           method = c("mc", "legacy"),
+                                           density = c("kde", "mvnorm"),
+                                           mc_n = 10000L) {
   bw <- match.arg(bw)
   eval_on <- match.arg(eval_on)
   engine <- .match_kde_engine(engine)
   method <- match.arg(method)
+  density <- match.arg(density)
 
   jsd_out <- estimate_jsd(
     data = data,
@@ -364,7 +393,9 @@ compare_overlap_metrics <- function(data,
     eval_seed = eval_seed,
     engine = engine,
     chunk_size = chunk_size,
-    method = method
+    method = method,
+    density = density,
+    mc_n = mc_n
   )
   jsd_wide <- jsd_out[, intersect(c("scope", "group", "n_tokens"), names(jsd_out)), drop = FALSE]
   jsd_wide$jsd <- jsd_out$jsd_point
@@ -414,7 +445,9 @@ compare_overlap_metrics <- function(data,
     eval_seed = eval_seed,
     engine = engine,
     chunk_size = chunk_size,
-    method = method
+    method = method,
+    density = density,
+    mc_n = mc_n
   )
   overlap_wide <- overlap_out[, intersect(c("scope", "group", "n_tokens"), names(overlap_out)), drop = FALSE]
   overlap_wide$percent_overlap <- overlap_out$overlap
@@ -530,7 +563,9 @@ compare_overlap_metrics <- function(data,
                                                n_boot = 300,
                                                conf_level = 0.95,
                                                progress = TRUE,
-                                               method = "mc") {
+                                               method = "mc",
+                                               density = "kde",
+                                               mc_n = 10000L) {
   key_cols <- if (is.null(group_col)) c("scope", "n_tokens") else c("scope", "group", "n_tokens")
 
   if (is.null(group_col)) {
@@ -551,7 +586,9 @@ compare_overlap_metrics <- function(data,
       n_boot = n_boot,
       conf_level = conf_level,
       progress = progress,
-      method = method
+      method = method,
+      density = density,
+      mc_n = mc_n
     ))
     out <- cbind(point_wide[, key_cols, drop = FALSE], dplyr::bind_rows(boot_rows))
     rownames(out) <- NULL
@@ -582,7 +619,9 @@ compare_overlap_metrics <- function(data,
       n_boot = n_boot,
       conf_level = conf_level,
       progress = progress,
-      method = method
+      method = method,
+      density = density,
+      mc_n = mc_n
     )
   })
   out <- cbind(point_wide[, key_cols, drop = FALSE], dplyr::bind_rows(boot_rows))
@@ -605,7 +644,9 @@ compare_overlap_metrics <- function(data,
                                           n_boot = 300,
                                           conf_level = 0.95,
                                           progress = TRUE,
-                                          method = "mc") {
+                                          method = "mc",
+                                          density = "kde",
+                                          mc_n = 10000L) {
   if (isTRUE(progress)) {
     message(
       "Bootstrapping overlap metrics for ", label, " (",
@@ -643,7 +684,9 @@ compare_overlap_metrics <- function(data,
         engine = engine,
         chunk_size = chunk_size,
         eps = eps,
-        method = method
+        method = method,
+        density = density,
+        mc_n = mc_n
       ),
       error = function(e) NULL
     )

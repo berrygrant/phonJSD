@@ -28,7 +28,7 @@ This approach is especially useful when:
 
 - **One call, many metrics:** `phontrast()` computes Jensen–Shannon divergence and distance, Pillai–Bartlett trace, Bhattacharyya distance/affinity, Mahalanobis distance, and percent overlap side by side
 - Pick any subset with the `metrics` argument
-- Kernel density–based estimation of acoustic distributions for the distributional metrics
+- Kernel density–based estimation of acoustic distributions for the distributional metrics, with an optional multivariate-normal backend (`density = "mvnorm"`)
 - Support for **1D and n-dimensional acoustic features**
 - Optional high-dimensional KDE speed controls, including diagonal Scott
   bandwidths, sampled evaluation points, and a fast diagonal-Gaussian engine
@@ -149,6 +149,36 @@ overlap): one kernel is still centered on each observed token, and the speedup
 comes from a cheaper diagonal bandwidth rule, evaluating densities on a bounded
 sampled support, and a vectorized diagonal-Gaussian evaluator. The package
 default is unchanged for backward compatibility.
+
+### Choosing the density backend
+
+The distributional metrics (Jensen–Shannon divergence and percent overlap) are
+computed from a density estimate for each category. By default that estimate is
+a kernel density (`density = "kde"`). You can instead fit one multivariate
+normal per category with `density = "mvnorm"`:
+
+```r
+phontrast(
+  data = vowels,
+  features = c("f1", "f2"),
+  category_col = "vowel",
+  density = "mvnorm"
+)
+```
+
+Under `density = "mvnorm"` the two categories are modelled as Gaussians and the
+JSD and overlap between them are estimated by Monte-Carlo (Jensen–Shannon
+divergence between two Gaussians has no closed form); `mc_n` sets the number of
+Monte-Carlo samples and `eval_seed` makes the estimate reproducible. This
+decouples the *density estimator* from the *metric*, so the estimator behind
+JSD and overlap can be matched to the same multivariate-normal assumptions that
+the Pillai, Bhattacharyya, and Mahalanobis columns already make — useful when
+comparing metrics on a common footing, or for higher-dimensional feature spaces
+where multivariate KDE is impractical. The Pillai, Bhattacharyya, and
+Mahalanobis columns are parametric by construction and are unaffected by this
+argument. `density` is available on `phontrast()`, `estimate_jsd()`,
+`estimate_overlap()`, `jsd_summary()`, `global_boot_jsd()`, `jsd_kde_nd()`, and
+`percent_overlap_kde()`.
 
 If you only need the package's information-theoretic estimate on its own, use
 `estimate_jsd()`:

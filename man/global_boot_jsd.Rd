@@ -19,6 +19,8 @@ global_boot_jsd(
   engine = c("ks", "fast_diag", "fast_diagonal"),
   chunk_size = 1000L,
   method = c("mc", "legacy"),
+  density = c("kde", "mvnorm"),
+  mc_n = 10000L,
   ...
 )
 }
@@ -55,7 +57,16 @@ to compare (e.g., "vowel"). Must have exactly two unique values.}
 \item{chunk_size}{Chunk size for \code{engine = "fast_diag"}.}
 
 \item{method}{Estimator passed to \code{jsd_kde_nd()}: \code{"mc"} (default)
-or \code{"legacy"} (pre-1.2.0 self-normalized estimate).}
+or \code{"legacy"} (pre-1.2.0 self-normalized estimate). Ignored when
+\code{density = "mvnorm"}.}
+
+\item{density}{Density model passed to \code{estimate_jsd()}: \code{"kde"}
+(default) or \code{"mvnorm"} (fit one multivariate normal per category and
+estimate JSD between the two Gaussians by Monte-Carlo).}
+
+\item{mc_n}{Positive integer; number of Monte-Carlo samples drawn from each
+fitted Gaussian when \code{density = "mvnorm"} (default \code{10000}).
+Ignored when \code{density = "kde"}.}
 
 \item{...}{Additional arguments passed to \code{jsd_kde_nd()}.}
 }

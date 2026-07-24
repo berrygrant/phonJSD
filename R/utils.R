@@ -322,6 +322,45 @@
   exp(log_density - scale)
 }
 
+.check_eval_seed <- function(eval_seed) {
+  if (is.null(eval_seed)) {
+    return(invisible(NULL))
+  }
+  if (!is.numeric(eval_seed) || length(eval_seed) != 1L ||
+      !is.finite(eval_seed) || eval_seed != as.integer(eval_seed)) {
+    stop("`eval_seed` must be NULL or a single finite integer.", call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+# Evaluate `expr` with the RNG seeded to `eval_seed`, restoring the caller's
+# random-number state on exit so the draw is reproducible without perturbing
+# the surrounding stream. When `eval_seed` is NULL the current state is used
+# and left untouched. `expr` is a promise: it is forced only after the seed is
+# set, so the seeding governs whatever random draws it makes.
+.with_eval_seed <- function(eval_seed, expr) {
+  .check_eval_seed(eval_seed)
+  if (is.null(eval_seed)) {
+    return(expr)
+  }
+  old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  } else {
+    NULL
+  }
+  on.exit({
+    if (is.null(old_seed)) {
+      if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+        rm(".Random.seed", envir = .GlobalEnv)
+      }
+    } else {
+      assign(".Random.seed", old_seed, envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+  set.seed(as.integer(eval_seed))
+  expr
+}
+
 .sample_kde_eval_points <- function(eval_pts, eval_n = NULL, eval_seed = NULL) {
   if (is.null(eval_n)) {
     return(eval_pts)
@@ -332,29 +371,7 @@
     return(eval_pts)
   }
 
-  if (!is.null(eval_seed)) {
-    if (!is.numeric(eval_seed) || length(eval_seed) != 1L ||
-        !is.finite(eval_seed) || eval_seed != as.integer(eval_seed)) {
-      stop("`eval_seed` must be NULL or a single finite integer.", call. = FALSE)
-    }
-    old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-      get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-    } else {
-      NULL
-    }
-    on.exit({
-      if (is.null(old_seed)) {
-        if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-          rm(".Random.seed", envir = .GlobalEnv)
-        }
-      } else {
-        assign(".Random.seed", old_seed, envir = .GlobalEnv)
-      }
-    }, add = TRUE)
-    set.seed(as.integer(eval_seed))
-  }
-
-  idx <- sample.int(nrow(eval_pts), eval_n)
+  idx <- .with_eval_seed(eval_seed, sample.int(nrow(eval_pts), eval_n))
   eval_pts[idx, , drop = FALSE]
 }
 
@@ -729,10 +746,19 @@
   -0.5 * (d * log(2 * pi) + logdet + quad)
 }
 
+.mvn_rsample <- function(n, mu, S) {
+  # n independent draws from N(mu, S). With Z an n-by-d matrix of iid N(0, 1)
+  # entries and R = chol(S) (upper-triangular, S = t(R) %*% R), the rows of
+  # Z %*% R have covariance t(R) %*% R = S; adding mu shifts the mean.
+  d <- length(mu)
+  Z <- matrix(stats::rnorm(n * d), nrow = n, ncol = d)
+  sweep(Z %*% chol(S), 2, mu, "+")
+}
+
 .mvnorm_mc_pair <- function(data,
                             features,
                             category_col,
-                            eval_n = NULL,
+                            mc_n = 10000L,
                             eval_seed = NULL,
                             ridge = 1e-6,
                             metric = "mvnorm") {
@@ -740,9 +766,8 @@
   .check_columns(data, c(category_col, features))
   data <- .metric_data(data, c(category_col, features))
   .check_numeric_features(data, features)
-  if (!is.null(eval_n)) {
-    .check_positive_count(eval_n, "eval_n")
-  }
+  .check_positive_count(mc_n, "mc_n")
+  mc_n <- as.integer(mc_n)
 
   levs <- .two_levels(data[[category_col]], "category_col")
   d <- length(features)
@@ -764,15 +789,21 @@
     )
   }
 
-  # Evaluate each fitted Gaussian at each category's own (optionally subsampled)
-  # observations -- draws from that category -- giving an MC estimate of the
-  # continuous JSD / overlap between the two fitted Gaussians.
-  X1e <- .sample_kde_eval_points(X1, eval_n = eval_n, eval_seed = eval_seed)
-  X2e <- .sample_kde_eval_points(X2, eval_n = eval_n, eval_seed = eval_seed)
+  # Fresh-sample estimator: draw mc_n points from each fitted Gaussian and
+  # evaluate both densities there. Unlike reusing the training points, this
+  # targets the JSD / overlap between the two *fitted* Gaussians -- a
+  # well-defined estimand independent of the observed sample -- with lower
+  # variance and no resubstitution bias, so no leave-one-out term is required.
+  draws <- .with_eval_seed(eval_seed, list(
+    X1e = .mvn_rsample(mc_n, mu1, S1),
+    X2e = .mvn_rsample(mc_n, mu2, S2)
+  ))
 
   list(
-    logp1 = .mvn_logdens(X1e, mu1, S1), logq1 = .mvn_logdens(X1e, mu2, S2),
-    logp2 = .mvn_logdens(X2e, mu1, S1), logq2 = .mvn_logdens(X2e, mu2, S2),
+    logp1 = .mvn_logdens(draws$X1e, mu1, S1),
+    logq1 = .mvn_logdens(draws$X1e, mu2, S2),
+    logp2 = .mvn_logdens(draws$X2e, mu1, S1),
+    logq2 = .mvn_logdens(draws$X2e, mu2, S2),
     n1 = nrow(X1), n2 = nrow(X2), levels = levs, data = data
   )
 }
