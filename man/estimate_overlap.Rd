@@ -17,6 +17,8 @@ estimate_overlap(
   engine = c("ks", "fast_diag", "fast_diagonal"),
   chunk_size = 1000L,
   method = c("mc", "legacy"),
+  density = c("kde", "mvnorm"),
+  mc_n = 10000L,
   ...
 )
 }
@@ -48,7 +50,17 @@ combined into a labeled \code{group} value such as
 \item{chunk_size}{Chunk size for \code{engine = "fast_diag"}.}
 
 \item{method}{Estimator passed to \code{percent_overlap_kde()}: \code{"mc"}
-(default) or \code{"legacy"} (pre-1.2.0 self-normalized estimate).}
+(default) or \code{"legacy"} (pre-1.2.0 self-normalized estimate). Ignored
+when \code{density = "mvnorm"}.}
+
+\item{density}{Density model passed to \code{percent_overlap_kde()}:
+\code{"kde"} (default) or \code{"mvnorm"} (fit one multivariate normal per
+category and estimate the overlapping coefficient between the two Gaussians
+by Monte-Carlo).}
+
+\item{mc_n}{Positive integer; number of Monte-Carlo samples drawn from each
+fitted Gaussian when \code{density = "mvnorm"} (default \code{10000}).
+Ignored when \code{density = "kde"}.}
 
 \item{...}{Additional arguments passed to \code{percent_overlap_kde()}.}
 }

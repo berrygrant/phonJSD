@@ -40,6 +40,21 @@
 #' using KDE by default; Pillai and Mahalanobis emphasize mean separation;
 #' Bhattacharyya metrics use a multivariate-normal approximation.
 #'
+#' @section Density backends:
+#' The distributional metrics (Jensen-Shannon divergence and proportional
+#' overlap) are computed from a density estimate for each category. The
+#' \code{density} argument selects that estimate: \code{"kde"} (the default)
+#' uses kernel density estimation, and \code{"mvnorm"} fits one multivariate
+#' normal per category and estimates the metric between the two Gaussians by
+#' Monte-Carlo (with \code{mc_n} samples and reproducible \code{eval_seed}).
+#' The \code{"mvnorm"} backend matches the estimator behind JSD and overlap to
+#' the same multivariate-normal assumptions the Pillai, Bhattacharyya, and
+#' Mahalanobis columns already make, and is convenient for higher-dimensional
+#' feature spaces where multivariate KDE is impractical. It is available on
+#' \code{phontrast()}, \code{estimate_jsd()}, \code{estimate_overlap()},
+#' \code{jsd_summary()}, \code{global_boot_jsd()}, \code{jsd_kde_nd()}, and
+#' \code{percent_overlap_kde()}; the parametric metrics are unaffected by it.
+#'
 #' @section High-dimensional workflows:
 #' Metrics can be estimated in arbitrary n-dimensional numeric feature spaces,
 #' including MFCCs and learned embeddings. Use \code{plot_category_pca()} for a

@@ -1,3 +1,36 @@
+# phontrast 2.2.0
+
+## Pluggable density backend for the distributional metrics
+
+- **Added a `density` argument to decouple the density *estimator* from the
+  *metric*.** The distributional metrics (Jensen-Shannon divergence and
+  proportional overlap) previously always used kernel density estimation. They
+  now accept `density = "kde"` (the default, unchanged) or `density = "mvnorm"`,
+  which fits one multivariate normal per category and estimates the metric
+  between the two Gaussians. This lets the estimator behind JSD and overlap be
+  matched to the same multivariate-normal assumptions the Pillai, Bhattacharyya,
+  and Mahalanobis metrics already make, and makes the metric x estimator
+  interaction a controlled choice rather than hard-wired to KDE.
+- Jensen-Shannon divergence between two Gaussians has no closed form (the
+  mixture is a Gaussian mixture), so the `"mvnorm"` backend estimates it by
+  **fresh-sample Monte-Carlo**: it draws `mc_n` points (default `10000`) from
+  each fitted Gaussian and averages the log density ratio. The estimand is the
+  JSD / overlap between the fitted Gaussians; `eval_seed` makes the draw
+  reproducible without disturbing the caller's random-number stream. The
+  Gaussian fit has no self-kernel, so the KDE-specific leave-one-out correction
+  does not apply.
+- `density` (and `mc_n`) are threaded through `phontrast()`,
+  `compare_overlap_metrics()`, `estimate_jsd()`, `estimate_overlap()`,
+  `jsd_summary()`, `global_boot_jsd()`, `jsd_kde_nd()`, and
+  `percent_overlap_kde()`. In `phontrast()` the argument affects only the
+  Jensen-Shannon and overlap columns; the Pillai, Bhattacharyya, and
+  Mahalanobis columns are parametric by construction and are unchanged.
+- The multivariate-normal log-density and sampler are implemented in base R via
+  a Cholesky solve, adding no new package dependency. Rank-deficient category
+  covariances are regularized with a small ridge before factorization.
+- Fully backward compatible: the default remains `density = "kde"` and all
+  existing results are unchanged.
+
 # phontrast 2.1.0
 
 ## Monte-Carlo JSD no longer floors small divergences to exactly 0

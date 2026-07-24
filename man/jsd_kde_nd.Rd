@@ -15,6 +15,8 @@ jsd_kde_nd(
   engine = c("ks", "fast_diag", "fast_diagonal"),
   chunk_size = 1000L,
   method = c("mc", "legacy"),
+  density = c("kde", "mvnorm"),
+  mc_n = 10000L,
   loo = TRUE
 )
 }
@@ -61,7 +63,24 @@ points processed per chunk by \code{engine = "fast_diag"}.}
 
 \item{method}{Estimator: \code{"mc"} (default) for the Monte-Carlo plug-in
 estimate of the continuous JSD, or \code{"legacy"} for the pre-1.2.0
-self-normalized sample-point index.}
+self-normalized sample-point index. Ignored when \code{density = "mvnorm"}.}
+
+\item{density}{Density model behind the estimate: \code{"kde"} (default)
+estimates each category's density by kernel density estimation;
+\code{"mvnorm"} fits one multivariate normal per category and estimates the
+continuous JSD between the two Gaussians by Monte-Carlo (no closed form
+exists). Under \code{"mvnorm"} the KDE-specific arguments (\code{bw},
+\code{engine}, \code{eval_on}, \code{chunk_size}, \code{method},
+\code{eval_n}, \code{loo}) do not apply; the Monte-Carlo sample size is set
+by \code{mc_n} and \code{eval_seed} makes the draw reproducible.}
+
+\item{mc_n}{Positive integer; number of Monte-Carlo samples drawn from each
+fitted Gaussian when \code{density = "mvnorm"} (default \code{10000}). The
+estimator draws \code{mc_n} fresh points from each category's fitted
+Gaussian and averages the log density ratio, so it targets the JSD between
+the two fitted Gaussians rather than a resubstitution estimate at the
+observed points. Larger values reduce Monte-Carlo variance. Ignored when
+\code{density = "kde"}.}
 
 \item{loo}{Logical; if \code{TRUE} (default) the Monte-Carlo estimator uses a
 partial leave-one-out correction on each category's self-density to reduce

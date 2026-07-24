@@ -322,6 +322,45 @@
   exp(log_density - scale)
 }
 
+.check_eval_seed <- function(eval_seed) {
+  if (is.null(eval_seed)) {
+    return(invisible(NULL))
+  }
+  if (!is.numeric(eval_seed) || length(eval_seed) != 1L ||
+      !is.finite(eval_seed) || eval_seed != as.integer(eval_seed)) {
+    stop("`eval_seed` must be NULL or a single finite integer.", call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+# Evaluate `expr` with the RNG seeded to `eval_seed`, restoring the caller's
+# random-number state on exit so the draw is reproducible without perturbing
+# the surrounding stream. When `eval_seed` is NULL the current state is used
+# and left untouched. `expr` is a promise: it is forced only after the seed is
+# set, so the seeding governs whatever random draws it makes.
+.with_eval_seed <- function(eval_seed, expr) {
+  .check_eval_seed(eval_seed)
+  if (is.null(eval_seed)) {
+    return(expr)
+  }
+  old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+    get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+  } else {
+    NULL
+  }
+  on.exit({
+    if (is.null(old_seed)) {
+      if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
+        rm(".Random.seed", envir = .GlobalEnv)
+      }
+    } else {
+      assign(".Random.seed", old_seed, envir = .GlobalEnv)
+    }
+  }, add = TRUE)
+  set.seed(as.integer(eval_seed))
+  expr
+}
+
 .sample_kde_eval_points <- function(eval_pts, eval_n = NULL, eval_seed = NULL) {
   if (is.null(eval_n)) {
     return(eval_pts)
@@ -332,29 +371,7 @@
     return(eval_pts)
   }
 
-  if (!is.null(eval_seed)) {
-    if (!is.numeric(eval_seed) || length(eval_seed) != 1L ||
-        !is.finite(eval_seed) || eval_seed != as.integer(eval_seed)) {
-      stop("`eval_seed` must be NULL or a single finite integer.", call. = FALSE)
-    }
-    old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-      get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-    } else {
-      NULL
-    }
-    on.exit({
-      if (is.null(old_seed)) {
-        if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-          rm(".Random.seed", envir = .GlobalEnv)
-        }
-      } else {
-        assign(".Random.seed", old_seed, envir = .GlobalEnv)
-      }
-    }, add = TRUE)
-    set.seed(as.integer(eval_seed))
-  }
-
-  idx <- sample.int(nrow(eval_pts), eval_n)
+  idx <- .with_eval_seed(eval_seed, sample.int(nrow(eval_pts), eval_n))
   eval_pts[idx, , drop = FALSE]
 }
 
@@ -708,4 +725,85 @@
     stop("Monte-Carlo overlap: no usable evaluation points.", call. = FALSE)
   }
   min(max(0.5 * mean(o1) + 0.5 * mean(o2), 0), 1)
+}
+
+# ---- Parametric multivariate-normal density backend ---------------------
+# `density = "mvnorm"`: fit one Gaussian per category and estimate JSD / overlap
+# with the same Monte-Carlo plug-in used for KDE, but with the parametric
+# density in place of the kernel estimate. A Gaussian fit has no self-kernel, so
+# no leave-one-out correction is needed (`.jsd_mc(loo = FALSE)`). Jensen-Shannon
+# divergence between two Gaussians has no closed form (the mixture is a Gaussian
+# mixture), so this remains a Monte-Carlo estimate.
+
+.mvn_logdens <- function(X, mu, S) {
+  # log N(x; mu, S) per row of X, via a Cholesky solve (no extra dependency).
+  d <- ncol(X)
+  R <- chol(S)                              # S = t(R) %*% R, R upper-triangular
+  logdet <- 2 * sum(log(diag(R)))
+  Xc <- sweep(as.matrix(X), 2, mu)          # centered rows
+  z <- forwardsolve(t(R), t(Xc))            # t(R) lower-tri; z = t(R)^-1 (x - mu)
+  quad <- colSums(z * z)                    # (x - mu)' S^-1 (x - mu)
+  -0.5 * (d * log(2 * pi) + logdet + quad)
+}
+
+.mvn_rsample <- function(n, mu, S) {
+  # n independent draws from N(mu, S). With Z an n-by-d matrix of iid N(0, 1)
+  # entries and R = chol(S) (upper-triangular, S = t(R) %*% R), the rows of
+  # Z %*% R have covariance t(R) %*% R = S; adding mu shifts the mean.
+  d <- length(mu)
+  Z <- matrix(stats::rnorm(n * d), nrow = n, ncol = d)
+  sweep(Z %*% chol(S), 2, mu, "+")
+}
+
+.mvnorm_mc_pair <- function(data,
+                            features,
+                            category_col,
+                            mc_n = 10000L,
+                            eval_seed = NULL,
+                            ridge = 1e-6,
+                            metric = "mvnorm") {
+  .check_ridge_eps(ridge, "ridge")
+  .check_columns(data, c(category_col, features))
+  data <- .metric_data(data, c(category_col, features))
+  .check_numeric_features(data, features)
+  .check_positive_count(mc_n, "mc_n")
+  mc_n <- as.integer(mc_n)
+
+  levs <- .two_levels(data[[category_col]], "category_col")
+  d <- length(features)
+  .check_two_category_sample_size(
+    data, category_col, .kde_min_category_tokens(d), metric
+  )
+
+  X1 <- as.matrix(data[data[[category_col]] == levs[1], features, drop = FALSE])
+  X2 <- as.matrix(data[data[[category_col]] == levs[2], features, drop = FALSE])
+
+  mu1 <- colMeans(X1); mu2 <- colMeans(X2)
+  S1 <- stats::cov(X1) + diag(ridge, d)
+  S2 <- stats::cov(X2) + diag(ridge, d)
+  if (!isTRUE(tryCatch({ chol(S1); chol(S2); TRUE }, error = function(e) FALSE))) {
+    stop(
+      "MVN density backend: a category covariance is not positive definite. ",
+      "Try increasing `ridge` or reducing feature dimensionality.",
+      call. = FALSE
+    )
+  }
+
+  # Fresh-sample estimator: draw mc_n points from each fitted Gaussian and
+  # evaluate both densities there. Unlike reusing the training points, this
+  # targets the JSD / overlap between the two *fitted* Gaussians -- a
+  # well-defined estimand independent of the observed sample -- with lower
+  # variance and no resubstitution bias, so no leave-one-out term is required.
+  draws <- .with_eval_seed(eval_seed, list(
+    X1e = .mvn_rsample(mc_n, mu1, S1),
+    X2e = .mvn_rsample(mc_n, mu2, S2)
+  ))
+
+  list(
+    logp1 = .mvn_logdens(draws$X1e, mu1, S1),
+    logq1 = .mvn_logdens(draws$X1e, mu2, S2),
+    logp2 = .mvn_logdens(draws$X2e, mu1, S1),
+    logq2 = .mvn_logdens(draws$X2e, mu2, S2),
+    n1 = nrow(X1), n2 = nrow(X2), levels = levs, data = data
+  )
 }
