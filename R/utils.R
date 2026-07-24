@@ -709,3 +709,70 @@
   }
   min(max(0.5 * mean(o1) + 0.5 * mean(o2), 0), 1)
 }
+
+# ---- Parametric multivariate-normal density backend ---------------------
+# `density = "mvnorm"`: fit one Gaussian per category and estimate JSD / overlap
+# with the same Monte-Carlo plug-in used for KDE, but with the parametric
+# density in place of the kernel estimate. A Gaussian fit has no self-kernel, so
+# no leave-one-out correction is needed (`.jsd_mc(loo = FALSE)`). Jensen-Shannon
+# divergence between two Gaussians has no closed form (the mixture is a Gaussian
+# mixture), so this remains a Monte-Carlo estimate.
+
+.mvn_logdens <- function(X, mu, S) {
+  # log N(x; mu, S) per row of X, via a Cholesky solve (no extra dependency).
+  d <- ncol(X)
+  R <- chol(S)                              # S = t(R) %*% R, R upper-triangular
+  logdet <- 2 * sum(log(diag(R)))
+  Xc <- sweep(as.matrix(X), 2, mu)          # centered rows
+  z <- forwardsolve(t(R), t(Xc))            # t(R) lower-tri; z = t(R)^-1 (x - mu)
+  quad <- colSums(z * z)                    # (x - mu)' S^-1 (x - mu)
+  -0.5 * (d * log(2 * pi) + logdet + quad)
+}
+
+.mvnorm_mc_pair <- function(data,
+                            features,
+                            category_col,
+                            eval_n = NULL,
+                            eval_seed = NULL,
+                            ridge = 1e-6,
+                            metric = "mvnorm") {
+  .check_ridge_eps(ridge, "ridge")
+  .check_columns(data, c(category_col, features))
+  data <- .metric_data(data, c(category_col, features))
+  .check_numeric_features(data, features)
+  if (!is.null(eval_n)) {
+    .check_positive_count(eval_n, "eval_n")
+  }
+
+  levs <- .two_levels(data[[category_col]], "category_col")
+  d <- length(features)
+  .check_two_category_sample_size(
+    data, category_col, .kde_min_category_tokens(d), metric
+  )
+
+  X1 <- as.matrix(data[data[[category_col]] == levs[1], features, drop = FALSE])
+  X2 <- as.matrix(data[data[[category_col]] == levs[2], features, drop = FALSE])
+
+  mu1 <- colMeans(X1); mu2 <- colMeans(X2)
+  S1 <- stats::cov(X1) + diag(ridge, d)
+  S2 <- stats::cov(X2) + diag(ridge, d)
+  if (!isTRUE(tryCatch({ chol(S1); chol(S2); TRUE }, error = function(e) FALSE))) {
+    stop(
+      "MVN density backend: a category covariance is not positive definite. ",
+      "Try increasing `ridge` or reducing feature dimensionality.",
+      call. = FALSE
+    )
+  }
+
+  # Evaluate each fitted Gaussian at each category's own (optionally subsampled)
+  # observations -- draws from that category -- giving an MC estimate of the
+  # continuous JSD / overlap between the two fitted Gaussians.
+  X1e <- .sample_kde_eval_points(X1, eval_n = eval_n, eval_seed = eval_seed)
+  X2e <- .sample_kde_eval_points(X2, eval_n = eval_n, eval_seed = eval_seed)
+
+  list(
+    logp1 = .mvn_logdens(X1e, mu1, S1), logq1 = .mvn_logdens(X1e, mu2, S2),
+    logp2 = .mvn_logdens(X2e, mu1, S1), logq2 = .mvn_logdens(X2e, mu2, S2),
+    n1 = nrow(X1), n2 = nrow(X2), levels = levs, data = data
+  )
+}

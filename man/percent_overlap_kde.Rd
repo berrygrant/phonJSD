@@ -15,6 +15,7 @@ percent_overlap_kde(
   engine = c("ks", "fast_diag", "fast_diagonal"),
   chunk_size = 1000L,
   method = c("mc", "legacy"),
+  density = c("kde", "mvnorm"),
   ...
 )
 }
@@ -49,7 +50,15 @@ points processed per chunk by \code{engine = "fast_diag"}.}
 \item{method}{Estimator: \code{"mc"} (default) for the Monte-Carlo plug-in
 estimate of the overlapping coefficient, or \code{"legacy"} for the
 pre-1.2.0 self-normalized sample-point estimate. \code{eval_on} applies to
-\code{"legacy"} only.}
+\code{"legacy"} only. Ignored when \code{density = "mvnorm"}.}
+
+\item{density}{Density model behind the estimate: \code{"kde"} (default)
+estimates each category's density by kernel density estimation;
+\code{"mvnorm"} fits one multivariate normal per category and estimates the
+overlapping coefficient between the two Gaussians by Monte-Carlo. Under
+\code{"mvnorm"} the KDE-specific arguments (\code{bw}, \code{engine},
+\code{eval_on}, \code{chunk_size}, \code{method}) do not apply;
+\code{eval_n} / \code{eval_seed} still control evaluation-point subsampling.}
 
 \item{...}{Reserved for future extensions; currently unused.}
 }

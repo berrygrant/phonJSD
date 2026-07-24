@@ -46,7 +46,15 @@
 #'   points processed per chunk by \code{engine = "fast_diag"}.
 #' @param method Estimator: \code{"mc"} (default) for the Monte-Carlo plug-in
 #'   estimate of the continuous JSD, or \code{"legacy"} for the pre-1.2.0
-#'   self-normalized sample-point index.
+#'   self-normalized sample-point index. Ignored when \code{density = "mvnorm"}.
+#' @param density Density model behind the estimate: \code{"kde"} (default)
+#'   estimates each category's density by kernel density estimation;
+#'   \code{"mvnorm"} fits one multivariate normal per category and estimates the
+#'   continuous JSD between the two Gaussians by Monte-Carlo (no closed form
+#'   exists). Under \code{"mvnorm"} the KDE-specific arguments (\code{bw},
+#'   \code{engine}, \code{eval_on}, \code{chunk_size}, \code{method},
+#'   \code{loo}) do not apply; \code{eval_n} / \code{eval_seed} still control
+#'   evaluation-point subsampling.
 #' @param loo Logical; if \code{TRUE} (default) the Monte-Carlo estimator uses a
 #'   partial leave-one-out correction on each category's self-density to reduce
 #'   resubstitution bias. The correction removes a sample-size-scaled fraction
@@ -98,11 +106,25 @@ jsd_kde_nd <- function(data,
                        engine = c("ks", "fast_diag", "fast_diagonal"),
                        chunk_size = 1000L,
                        method = c("mc", "legacy"),
+                       density = c("kde", "mvnorm"),
                        loo = TRUE) {
 
   .validate_metric_inputs(data, features, group)
   method <- match.arg(method)
+  density <- match.arg(density)
   .check_bool(loo, "loo")
+
+  if (identical(density, "mvnorm")) {
+    mc <- .mvnorm_mc_pair(
+      data = data,
+      features = features,
+      category_col = group,
+      eval_n = eval_n,
+      eval_seed = eval_seed,
+      metric = "jsd_kde_nd()"
+    )
+    return(.jsd_mc(mc, loo = FALSE))
+  }
 
   if (identical(method, "mc")) {
     mc <- .kde_mc_pair(
