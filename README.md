@@ -34,7 +34,7 @@ This approach is especially useful when:
   bandwidths, sampled evaluation points, and a fast diagonal-Gaussian engine
 - Global and group-level bootstrap summaries
 - A common `orientation` / `separation_value` scale so overlap and separation metrics can be read together
-- ggplot2-backed visualizations for metric tables, category spaces, and PCA projections
+- **Distribution-aware, accountable visualization:** `plot_contrast()` draws the same density model the metrics use (KDE highest-density regions or fitted-Gaussian ellipses), shades the overlap itself, and annotates panels with the metric values; plus metric-table, category-space, and PCA plots, all on a colorblind-safe Okabe–Ito palette (`theme_phontrast()`)
 - Reproducible pipelines compatible with tidyverse workflows
 
 ---
@@ -86,10 +86,18 @@ metrics_long[, c("group", "metric", "estimate", "orientation",
                  "separation_value", "separation_rank")]
 ```
 
-If `ggplot2` is installed, the same workflow can be visualized directly:
+If `ggplot2` is installed, the same workflow can be visualized directly. The
+flagship visualization is `plot_contrast()`, a distribution-aware,
+accountable view of one contrast: it draws the *same density model the
+distributional metrics are computed from* (KDE highest-density regions by
+default, coverage ellipses of the fitted Gaussians under
+`density = "mvnorm"`), shades the density overlap itself, and labels each
+panel with the Jensen–Shannon divergence and proportional overlap computed
+under the plotted model. The caption records the estimator settings, and the
+full metric table is attached as `attr(p, "contrast_metrics")`.
 
 ```r
-plot_category_space(
+plot_contrast(
   data = vowels,
   features = c("f2", "f1"),
   category_col = "vowel",
@@ -97,9 +105,20 @@ plot_category_space(
   reverse_x = TRUE,
   reverse_y = TRUE
 )
-
-plot_overlap_metrics(metrics_long)
 ```
+
+`phontrast()` results plot themselves — `plot(metrics_long)` (or
+`ggplot2::autoplot()`) draws the metric comparison via
+`plot_overlap_metrics()`:
+
+```r
+plot(metrics_long)
+```
+
+All plots share a colorblind-safe Okabe–Ito palette and a publication theme;
+`theme_phontrast()`, `scale_color_phontrast()`, `scale_fill_phontrast()`, and
+`phontrast_palette()` are exported so your own figures can match. Simple
+exploratory views remain available via `plot_category_space()`.
 
 For multidimensional features such as MFCCs or acoustic embeddings, compute
 metrics on the full feature set and use PCA plots as a diagnostic projection:

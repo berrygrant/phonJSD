@@ -1,3 +1,35 @@
+# phontrast 2.3.0
+
+## Distribution-aware, accountable plotting
+
+- **New flagship visualization `plot_contrast()`.** Draws the *same density
+  model the distributional metrics are computed from*: under
+  `density = "kde"` it shows highest-density regions of each category's kernel
+  density estimate (same bandwidth selection and ks evaluation as the
+  metrics); under `density = "mvnorm"` it shows coverage ellipses of the
+  fitted Gaussians used by the parametric backend. The pointwise minimum of
+  the two densities -- the mass the proportional-overlap metric integrates --
+  is shaded directly (a ribbon in 1-D, a soft raster in 2-D, normalized across
+  panels so fainter panels genuinely overlap less).
+- **Accountability by default.** Panels are annotated with the Jensen-Shannon
+  divergence and proportional overlap computed by `phontrast()` under the
+  plotted density model (optionally with bootstrap intervals via `n_boot`);
+  the caption records the estimator configuration (backend, bandwidth,
+  `mc_n`, seed, n); and the full annotation table is attached to the plot as
+  `attr(p, "contrast_metrics")`.
+- **Results plot themselves.** `phontrast()` output now carries class
+  `"phontrast_contrast"`, so `plot()` and `ggplot2::autoplot()` draw the
+  metric comparison directly via `plot_overlap_metrics()`.
+- **A shared visual identity.** New exported `theme_phontrast()`,
+  `scale_colour_phontrast()` / `scale_color_phontrast()` /
+  `scale_fill_phontrast()`, and `phontrast_palette()` (a colorblind-safe
+  Okabe-Ito palette ordered so the leading pair maximizes contrast for
+  two-category plots). All plotting functions -- including the existing
+  `plot_overlap_metrics()`, `plot_category_space()`, and
+  `plot_category_pca()`, whose arguments and behavior are otherwise
+  unchanged -- now share this theme and palette.
+- Plotting remains optional: `ggplot2` stays in Suggests.
+
 # phontrast 2.2.0
 
 ## Pluggable density backend for the distributional metrics

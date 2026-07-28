@@ -755,6 +755,12 @@
   sweep(Z %*% chol(S), 2, mu, "+")
 }
 
+.mvn_fit_category <- function(X, ridge) {
+  # The single Gaussian fit used by the mvnorm density backend -- and by
+  # plot_contrast(), so plotted regions come from the same model as the metric.
+  list(mu = colMeans(X), S = stats::cov(X) + diag(ridge, ncol(X)))
+}
+
 .mvnorm_mc_pair <- function(data,
                             features,
                             category_col,
@@ -778,9 +784,10 @@
   X1 <- as.matrix(data[data[[category_col]] == levs[1], features, drop = FALSE])
   X2 <- as.matrix(data[data[[category_col]] == levs[2], features, drop = FALSE])
 
-  mu1 <- colMeans(X1); mu2 <- colMeans(X2)
-  S1 <- stats::cov(X1) + diag(ridge, d)
-  S2 <- stats::cov(X2) + diag(ridge, d)
+  fit1 <- .mvn_fit_category(X1, ridge)
+  fit2 <- .mvn_fit_category(X2, ridge)
+  mu1 <- fit1$mu; S1 <- fit1$S
+  mu2 <- fit2$mu; S2 <- fit2$S
   if (!isTRUE(tryCatch({ chol(S1); chol(S2); TRUE }, error = function(e) FALSE))) {
     stop(
       "MVN density backend: a category covariance is not positive definite. ",

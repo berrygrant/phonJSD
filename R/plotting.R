@@ -129,11 +129,10 @@ plot_overlap_metrics <- function(metrics,
 
   p <- p +
     ggplot2::geom_point(size = 2.2, na.rm = TRUE) +
-    ggplot2::labs(x = x_lab, y = y_lab, color = "Direction") +
-    ggplot2::theme_minimal() +
+    ggplot2::labs(x = x_lab, y = y_lab, color = "Direction")
+  p <- .phontrast_style(p) +
     ggplot2::theme(
-      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
-      panel.grid.minor = ggplot2::element_blank()
+      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
     )
 
   if (isTRUE(facet)) {
@@ -392,6 +391,43 @@ plot_category_pca <- function(data,
   p
 }
 
+#' Plot a phontrast() result directly
+#'
+#' \code{phontrast()} results carry the class \code{"phontrast_contrast"}, so
+#' they can be plotted without an explicit call to
+#' \code{plot_overlap_metrics()}: \code{plot(phontrast(...))} draws the metric
+#' comparison, and \code{ggplot2::autoplot(phontrast(...))} returns the same
+#' plot unprinted for further composition.
+#'
+#' @param x,object A \code{phontrast_contrast} object returned by
+#'   \code{phontrast()}.
+#' @param ... Passed on to \code{plot_overlap_metrics()}.
+#'
+#' @return \code{plot()} draws the plot and returns it invisibly;
+#'   \code{autoplot()} returns the \pkg{ggplot2} object unprinted.
+#' @examples
+#' set.seed(2026)
+#' vowels <- data.frame(
+#'   vowel = rep(c("ih", "eh"), each = 40),
+#'   f1 = c(rnorm(40, 500, 55), rnorm(40, 565, 60)),
+#'   f2 = c(rnorm(40, 1980, 150), rnorm(40, 1870, 155))
+#' )
+#' if (requireNamespace("ggplot2", quietly = TRUE)) {
+#'   plot(phontrast(vowels, c("f1", "f2"), "vowel", output = "long"))
+#' }
+#' @export
+plot.phontrast_contrast <- function(x, ...) {
+  p <- plot_overlap_metrics(x, ...)
+  print(p)
+  invisible(p)
+}
+
+#' @rdname plot.phontrast_contrast
+#' @exportS3Method ggplot2::autoplot
+autoplot.phontrast_contrast <- function(object, ...) {
+  plot_overlap_metrics(object, ...)
+}
+
 .require_ggplot2 <- function() {
   if (!requireNamespace("ggplot2", quietly = TRUE)) {
     stop(
@@ -495,9 +531,8 @@ plot_category_pca <- function(data,
     )
   ) +
     ggplot2::geom_density(alpha = 0.25, na.rm = TRUE) +
-    ggplot2::labs(x = feature, y = "Density", color = category_col, fill = category_col) +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
+    ggplot2::labs(x = feature, y = "Density", color = category_col, fill = category_col)
+  p <- .phontrast_style(p, fill = TRUE)
 
   if (isTRUE(points)) {
     p <- p + ggplot2::geom_rug(alpha = point_alpha, sides = "b", na.rm = TRUE)
@@ -550,9 +585,8 @@ plot_category_pca <- function(data,
   }
 
   p <- p +
-    ggplot2::labs(x = features[[1]], y = features[[2]], color = category_col) +
-    ggplot2::theme_minimal() +
-    ggplot2::theme(panel.grid.minor = ggplot2::element_blank())
+    ggplot2::labs(x = features[[1]], y = features[[2]], color = category_col)
+  p <- .phontrast_style(p)
 
   if (isTRUE(reverse_x)) {
     p <- p + ggplot2::scale_x_reverse()

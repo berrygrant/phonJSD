@@ -111,7 +111,9 @@ output contains \code{metric}, \code{estimate}, \code{orientation},
 \code{p_value} (populated for the Pillai row, \code{NA} otherwise) columns;
 with \code{do_boot = TRUE} it also includes \code{boot_mean},
 \code{boot_sd}, \code{ci_lower}, \code{ci_upper}, \code{n_boot}, and
-\code{conf_level}.
+\code{conf_level}. The result carries class \code{"phontrast_contrast"},
+so \code{plot()} and \code{ggplot2::autoplot()} draw it directly via
+\code{plot_overlap_metrics()}.
 }
 \description{
 \code{phontrast()} is the package's main entry point. It computes one or more

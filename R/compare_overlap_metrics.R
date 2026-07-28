@@ -88,7 +88,9 @@
 #'   \code{p_value} (populated for the Pillai row, \code{NA} otherwise) columns;
 #'   with \code{do_boot = TRUE} it also includes \code{boot_mean},
 #'   \code{boot_sd}, \code{ci_lower}, \code{ci_upper}, \code{n_boot}, and
-#'   \code{conf_level}.
+#'   \code{conf_level}. The result carries class \code{"phontrast_contrast"},
+#'   so \code{plot()} and \code{ggplot2::autoplot()} draw it directly via
+#'   \code{plot_overlap_metrics()}.
 #'
 #' @examples
 #' set.seed(2026)
@@ -242,10 +244,17 @@ phontrast <- function(data,
   wide <- .select_contrast_columns(wide, metrics)
 
   if (identical(output, "wide")) {
-    return(wide)
+    return(.as_phontrast_contrast(wide))
   }
 
-  .comparison_long(wide)
+  .as_phontrast_contrast(.comparison_long(wide))
+}
+
+# Subclass phontrast() output so plot() and ggplot2::autoplot() dispatch to
+# plot_overlap_metrics(). Purely additive: the object remains a tibble.
+.as_phontrast_contrast <- function(x) {
+  class(x) <- unique(c("phontrast_contrast", class(x)))
+  x
 }
 
 # ---- metric selection ------------------------------------------------------

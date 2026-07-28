@@ -25,9 +25,13 @@
 #'     \code{percent_overlap_kde()}, \code{pillai_overlap()}, and
 #'     \code{bhattacharyya_mvnorm()} when validating methods, debugging one
 #'     contrast, or reproducing a specific metric.
-#'   \item Use \code{plot_overlap_metrics()}, \code{plot_category_space()}, and
-#'     \code{plot_category_pca()} for ggplot2-backed diagnostics and
-#'     presentation figures.
+#'   \item Use \code{plot_contrast()} for a distribution-aware, annotated view
+#'     of one contrast that draws the same density model the metrics use, and
+#'     \code{plot_overlap_metrics()} (also available as \code{plot()} /
+#'     \code{ggplot2::autoplot()} on \code{phontrast()} results),
+#'     \code{plot_category_space()}, and \code{plot_category_pca()} for
+#'     ggplot2-backed diagnostics and presentation figures, all sharing the
+#'     colorblind-safe \code{theme_phontrast()} visual identity.
 #' }
 #'
 #' @section Choosing metrics:
