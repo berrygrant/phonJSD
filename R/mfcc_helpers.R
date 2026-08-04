@@ -26,20 +26,17 @@
 #' @return The input data frame with added MFCC columns.
 #'
 #' @examples
-#' \dontrun{
-#' segments <- data.frame(
-#'   wav_path = c("speaker01_utt01.wav", "speaker01_utt02.wav"),
-#'   vowel_start = c(0.42, 1.15),
-#'   vowel_end = c(0.57, 1.31)
-#' )
+#' if (requireNamespace("tuneR", quietly = TRUE)) {
+#'   wav_path <- tempfile(fileext = ".wav")
+#'   wave <- tuneR::sine(
+#'     freq = 440, duration = 0.25, samp.rate = 16000, xunit = "time"
+#'   )
+#'   tuneR::writeWave(wave, wav_path)
 #'
-#' extract_mfcc(
-#'   data = segments,
-#'   file_col = "wav_path",
-#'   start_col = "vowel_start",
-#'   end_col = "vowel_end",
-#'   numcep = 13
-#' )
+#'   segments <- data.frame(wav_path = wav_path)
+#'   mfcc <- extract_mfcc(segments, file_col = "wav_path", numcep = 3)
+#'   unlink(wav_path)
+#'   mfcc[, c("mfcc1", "mfcc2", "mfcc3")]
 #' }
 #' @export
 extract_mfcc <- function(data,
@@ -90,10 +87,11 @@ extract_mfcc <- function(data,
   n <- nrow(data)
   out <- matrix(NA_real_, nrow = n, ncol = numcep)
   colnames(out) <- paste0(prefix, seq_len(numcep))
-  failures <- rep(NA_character_, n)
+  failure_state <- new.env(parent = emptyenv())
+  failure_state$reasons <- rep(NA_character_, n)
 
   fail_row <- function(i, reason) {
-    failures[i] <<- reason
+    failure_state$reasons[i] <- reason
     if (isTRUE(strict)) {
       stop("extract_mfcc(): row ", i, " failed: ", reason, call. = FALSE)
     }
@@ -188,11 +186,12 @@ extract_mfcc <- function(data,
     out[i, ] <- vec
   }
 
-  failed <- which(!is.na(failures))
+  failed <- which(!is.na(failure_state$reasons))
   if (length(failed) && isTRUE(warn) && !isTRUE(strict)) {
     warning(
       "extract_mfcc(): MFCC extraction failed for ", length(failed), " of ",
-      n, " row(s). First failure: row ", failed[1], ": ", failures[failed[1]],
+      n, " row(s). First failure: row ", failed[1], ": ",
+      failure_state$reasons[failed[1]],
       call. = FALSE
     )
   }

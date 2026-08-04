@@ -62,7 +62,6 @@ This lets you propagate measurement uncertainty in JSD into model
 parameters (e.g., GAM/LMM coefficients).
 }
 \examples{
-\donttest{
 set.seed(2026)
 speakers <- paste0("s", 1:4)
 dat <- data.frame(
@@ -87,5 +86,4 @@ hier_boot_jsd_model(
   min_tokens = 20,
   progress = FALSE
 )
-}
 }

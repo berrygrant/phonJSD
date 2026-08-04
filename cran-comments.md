@@ -1,15 +1,22 @@
 ## Resubmission
 
-This is a resubmission. Compared to the previously submitted version (2.0.2):
+This is a resubmission. Compared to the previously submitted version (2.1.0):
 
-- I removed a relative-path link to `ROADMAP.md` from the README (that file is
-  intentionally not shipped in the package), which resolves the "invalid file
-  URI" reported by the CRAN incoming checks.
-- The version was bumped to 2.1.0 because the default Monte-Carlo
-  Jensen-Shannon divergence estimator was corrected: its leave-one-out bias
-  correction could floor small but real divergences to exactly 0, and now uses
-  a sample-size-scaled partial correction instead (documented in NEWS.md and
-  covered by a regression test).
+- I replaced the `\\dontrun{}` example for `extract_mfcc()` with a fast,
+  executable example. It creates a short WAV file under `tempdir()`, guards the
+  optional `tuneR` dependency with `requireNamespace()`, and removes the file
+  after use.
+- I unwrapped the short `phontrast()` and `hier_boot_jsd_model()` bootstrap
+  examples after measuring them below five seconds. I also reduced the
+  illustrative `estimate_jsd()` bootstrap count from 50 to 10, bringing that
+  example below five seconds so it could be unwrapped. No examples now use
+  `\\dontrun{}` or `\\donttest{}`.
+- I removed direct access to `.GlobalEnv` and `.Random.seed`. Seeded internal
+  sampling now uses a private deterministic generator, so `eval_seed` remains
+  reproducible without modifying the user's workspace or RNG stream.
+- Versions 2.2.0 and 2.3.0 added a multivariate-normal density backend and
+  distribution-aware plotting, respectively. Version 2.3.1 contains the CRAN
+  review fixes above; the previously published GitHub tags remain unchanged.
 
 ## Submission
 
@@ -21,14 +28,12 @@ by the maintainer.
 
 ## Test environments
 
-- Local: macOS 26.5 (aarch64-apple-darwin), R 4.5.3
-- win-builder: R-devel (`devtools::check_win_devel()`)
+- Local: macOS 26.5.2 (aarch64-apple-darwin23), R 4.6.1,
+  `R CMD check --as-cran --no-manual`
 
 ## R CMD check results
 
-0 errors | 0 warnings | 1 note
-
-* This is a new submission.
+0 errors | 0 warnings | 0 notes
 
 ## Notes for the reviewer
 

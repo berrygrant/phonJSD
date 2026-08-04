@@ -74,14 +74,12 @@
 #'   category_col = "vowel"
 #' )
 #'
-#' \donttest{
-#' # Bootstrap confidence intervals, global and by speaker (slower).
+#' # Bootstrap confidence intervals, global and by speaker.
 #' # Increase n_boot for real analyses.
 #' estimate_jsd(vowels, c("f1", "f2"), "vowel",
-#'              do_boot = TRUE, n_boot = 50)
+#'              do_boot = TRUE, n_boot = 10)
 #' estimate_jsd(vowels, c("f1", "f2"), "vowel", group_col = "speaker",
-#'              do_boot = TRUE, n_boot = 50)
-#' }
+#'              do_boot = TRUE, n_boot = 10)
 #' @export
 #' @importFrom rlang .data
 estimate_jsd <- function(data,

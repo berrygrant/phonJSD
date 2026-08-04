@@ -1,3 +1,21 @@
+# phontrast 2.3.1
+
+## CRAN resubmission fixes
+
+- Replaced the non-running `extract_mfcc()` example with a fast, executable
+  example that creates and removes a short WAV file in the R session's
+  temporary directory. The optional `tuneR` dependency is guarded with
+  `requireNamespace()` as recommended for packages in `Suggests`.
+- Unwrapped the short `phontrast()` and `hier_boot_jsd_model()` bootstrap
+  examples after confirming that they run well under five seconds. Reduced the
+  illustrative `estimate_jsd()` bootstrap count so that example is also under
+  five seconds and can be unwrapped. No examples now use `\dontrun{}` or
+  `\donttest{}`.
+- Removed all direct access to `.GlobalEnv`. Seeded KDE subsampling and
+  multivariate-normal Monte Carlo now use a private deterministic generator,
+  retaining reproducibility without reading, writing, or replacing the user's
+  `.Random.seed`. Unseeded stochastic calls retain their previous behavior.
+
 # phontrast 2.3.0
 
 ## Distribution-aware, accountable plotting

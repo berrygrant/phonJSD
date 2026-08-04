@@ -327,38 +327,62 @@
     return(invisible(NULL))
   }
   if (!is.numeric(eval_seed) || length(eval_seed) != 1L ||
-      !is.finite(eval_seed) || eval_seed != as.integer(eval_seed)) {
-    stop("`eval_seed` must be NULL or a single finite integer.", call. = FALSE)
+      !is.finite(eval_seed) || eval_seed != trunc(eval_seed) ||
+      abs(eval_seed) > .Machine$integer.max) {
+    stop(
+      "`eval_seed` must be NULL or a single finite 32-bit integer.",
+      call. = FALSE
+    )
   }
   invisible(NULL)
 }
 
-# Evaluate `expr` with the RNG seeded to `eval_seed`, restoring the caller's
-# random-number state on exit so the draw is reproducible without perturbing
-# the surrounding stream. When `eval_seed` is NULL the current state is used
-# and left untouched. `expr` is a promise: it is forced only after the seed is
-# set, so the seeding governs whatever random draws it makes.
-.with_eval_seed <- function(eval_seed, expr) {
+# Deterministic Park-Miller uniforms for seeded internal draws. This generator
+# is deliberately local: unlike set.seed(), it never reads or writes the
+# caller's session RNG state. The Schrage update avoids integer overflow.
+.local_uniforms <- function(n, eval_seed) {
   .check_eval_seed(eval_seed)
+  .check_positive_count(n, "n")
   if (is.null(eval_seed)) {
-    return(expr)
+    stop("`.local_uniforms()` requires a non-NULL seed.", call. = FALSE)
   }
-  old_seed <- if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-    get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
-  } else {
-    NULL
+
+  modulus <- 2147483647
+  multiplier <- 16807
+  quotient <- 127773
+  remainder <- 2836
+  state <- (as.double(eval_seed) %% (modulus - 1)) + 1
+  out <- numeric(as.integer(n))
+
+  for (i in seq_along(out)) {
+    hi <- floor(state / quotient)
+    lo <- state - hi * quotient
+    next_state <- multiplier * lo - remainder * hi
+    state <- if (next_state > 0) next_state else next_state + modulus
+    out[i] <- state / modulus
   }
-  on.exit({
-    if (is.null(old_seed)) {
-      if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE)) {
-        rm(".Random.seed", envir = .GlobalEnv)
-      }
-    } else {
-      assign(".Random.seed", old_seed, envir = .GlobalEnv)
-    }
-  }, add = TRUE)
-  set.seed(as.integer(eval_seed))
-  expr
+  out
+}
+
+.local_normals <- function(n, eval_seed) {
+  .check_positive_count(n, "n")
+  n <- as.integer(n)
+  n_pairs <- ceiling(n / 2)
+  u <- .local_uniforms(2L * n_pairs, eval_seed)
+  radius <- sqrt(-2 * log(u[seq_len(n_pairs)]))
+  angle <- 2 * pi * u[n_pairs + seq_len(n_pairs)]
+  as.vector(rbind(radius * cos(angle), radius * sin(angle)))[seq_len(n)]
+}
+
+.local_sample_int <- function(n, size, eval_seed) {
+  .check_positive_count(n, "n")
+  .check_positive_count(size, "size")
+  n <- as.integer(n)
+  size <- as.integer(size)
+  if (size > n) {
+    stop("`size` must not exceed `n`.", call. = FALSE)
+  }
+  order(.local_uniforms(n, eval_seed))[seq_len(size)]
 }
 
 .sample_kde_eval_points <- function(eval_pts, eval_n = NULL, eval_seed = NULL) {
@@ -371,7 +395,11 @@
     return(eval_pts)
   }
 
-  idx <- .with_eval_seed(eval_seed, sample.int(nrow(eval_pts), eval_n))
+  idx <- if (is.null(eval_seed)) {
+    sample.int(nrow(eval_pts), eval_n)
+  } else {
+    .local_sample_int(nrow(eval_pts), eval_n, eval_seed)
+  }
   eval_pts[idx, , drop = FALSE]
 }
 
@@ -746,12 +774,21 @@
   -0.5 * (d * log(2 * pi) + logdet + quad)
 }
 
-.mvn_rsample <- function(n, mu, S) {
+.mvn_rsample <- function(n, mu, S, standard_normals = NULL) {
   # n independent draws from N(mu, S). With Z an n-by-d matrix of iid N(0, 1)
   # entries and R = chol(S) (upper-triangular, S = t(R) %*% R), the rows of
   # Z %*% R have covariance t(R) %*% R = S; adding mu shifts the mean.
   d <- length(mu)
-  Z <- matrix(stats::rnorm(n * d), nrow = n, ncol = d)
+  if (is.null(standard_normals)) {
+    standard_normals <- stats::rnorm(n * d)
+  }
+  if (length(standard_normals) != n * d || any(!is.finite(standard_normals))) {
+    stop(
+      "`standard_normals` must contain `n * length(mu)` finite values.",
+      call. = FALSE
+    )
+  }
+  Z <- matrix(standard_normals, nrow = n, ncol = d)
   sweep(Z %*% chol(S), 2, mu, "+")
 }
 
@@ -801,10 +838,23 @@
   # targets the JSD / overlap between the two *fitted* Gaussians -- a
   # well-defined estimand independent of the observed sample -- with lower
   # variance and no resubstitution bias, so no leave-one-out term is required.
-  draws <- .with_eval_seed(eval_seed, list(
-    X1e = .mvn_rsample(mc_n, mu1, S1),
-    X2e = .mvn_rsample(mc_n, mu2, S2)
-  ))
+  if (is.null(eval_seed)) {
+    draws <- list(
+      X1e = .mvn_rsample(mc_n, mu1, S1),
+      X2e = .mvn_rsample(mc_n, mu2, S2)
+    )
+  } else {
+    standard_normals <- .local_normals(2L * mc_n * d, eval_seed)
+    split_at <- mc_n * d
+    draws <- list(
+      X1e = .mvn_rsample(
+        mc_n, mu1, S1, standard_normals[seq_len(split_at)]
+      ),
+      X2e = .mvn_rsample(
+        mc_n, mu2, S2, standard_normals[split_at + seq_len(split_at)]
+      )
+    )
+  }
 
   list(
     logp1 = .mvn_logdens(draws$X1e, mu1, S1),

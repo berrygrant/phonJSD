@@ -125,7 +125,6 @@
 #'   output = "wide"
 #' )
 #'
-#' \donttest{
 #' # Bootstrapping is useful but slower because every requested metric is
 #' # recomputed on every resample. Use a larger n_boot for real analyses.
 #' phontrast(
@@ -138,7 +137,6 @@
 #'   n_boot = 5,
 #'   progress = FALSE
 #' )
-#' }
 #' @export
 phontrast <- function(data,
                       features,

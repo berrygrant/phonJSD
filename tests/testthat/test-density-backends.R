@@ -126,12 +126,25 @@ test_that("eval_seed makes the mvnorm estimate reproducible without touching the
   cc <- jsd_kde_nd(d, c("f1", "f2"), "cat", density = "mvnorm", eval_seed = 7)
   expect_false(isTRUE(all.equal(a, cc)))
 
-  # The seeded draw must restore the caller's random-number state.
+  # The private seeded generator must not read or change the caller's stream.
   set.seed(123); r1 <- runif(1)
   set.seed(123)
   invisible(jsd_kde_nd(d, c("f1", "f2"), "cat", density = "mvnorm", eval_seed = 42))
   r2 <- runif(1)
   expect_equal(r1, r2)
+})
+
+test_that("seeded evaluation-point sampling leaves the RNG stream unchanged", {
+  points <- matrix(seq_len(200), ncol = 2)
+
+  set.seed(456); expected <- runif(1)
+  set.seed(456)
+  first <- phontrast:::.sample_kde_eval_points(points, 12, eval_seed = 99)
+  second <- phontrast:::.sample_kde_eval_points(points, 12, eval_seed = 99)
+  observed <- runif(1)
+
+  expect_identical(first, second)
+  expect_equal(observed, expected)
 })
 
 test_that("density argument threads through the high-level API", {

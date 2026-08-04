@@ -30,7 +30,6 @@
 #'   }
 #'
 #' @examples
-#' \donttest{
 #' set.seed(2026)
 #' speakers <- paste0("s", 1:4)
 #' dat <- data.frame(
@@ -55,7 +54,6 @@
 #'   min_tokens = 20,
 #'   progress = FALSE
 #' )
-#' }
 #' @export
 #' @importFrom dplyr group_by summarize first bind_rows left_join across all_of
 #' @importFrom purrr map

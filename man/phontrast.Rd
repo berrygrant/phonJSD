@@ -177,7 +177,6 @@ phontrast(
   output = "wide"
 )
 
-\donttest{
 # Bootstrapping is useful but slower because every requested metric is
 # recomputed on every resample. Use a larger n_boot for real analyses.
 phontrast(
@@ -190,5 +189,4 @@ phontrast(
   n_boot = 5,
   progress = FALSE
 )
-}
 }

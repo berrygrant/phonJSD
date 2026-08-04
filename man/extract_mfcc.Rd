@@ -56,19 +56,16 @@ This function uses \pkg{tuneR} to read WAV files and compute MFCCs. The
 package is optional; if it is not installed, an informative error is raised.
 }
 \examples{
-\dontrun{
-segments <- data.frame(
-  wav_path = c("speaker01_utt01.wav", "speaker01_utt02.wav"),
-  vowel_start = c(0.42, 1.15),
-  vowel_end = c(0.57, 1.31)
-)
+if (requireNamespace("tuneR", quietly = TRUE)) {
+  wav_path <- tempfile(fileext = ".wav")
+  wave <- tuneR::sine(
+    freq = 440, duration = 0.25, samp.rate = 16000, xunit = "time"
+  )
+  tuneR::writeWave(wave, wav_path)
 
-extract_mfcc(
-  data = segments,
-  file_col = "wav_path",
-  start_col = "vowel_start",
-  end_col = "vowel_end",
-  numcep = 13
-)
+  segments <- data.frame(wav_path = wav_path)
+  mfcc <- extract_mfcc(segments, file_col = "wav_path", numcep = 3)
+  unlink(wav_path)
+  mfcc[, c("mfcc1", "mfcc2", "mfcc3")]
 }
 }
