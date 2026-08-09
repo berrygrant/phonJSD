@@ -217,6 +217,35 @@ Use lower-level helpers such as `jsd_kde_nd()`, `percent_overlap_kde()`,
 `pillai_overlap()`, and `bhattacharyya_mvnorm()` when you are validating a
 method, debugging one contrast, or need direct control over one metric.
 
+### Proportion-standardized Pillai estimates
+
+For an exactly two-category design, `pillai_overlap()` can optionally estimate
+the squared Mahalanobis separation and the Pillai score the same estimated
+system would have under a balanced category split:
+
+```r
+pillai_overlap(
+  data = vowels,
+  features = c("f1", "f2"),
+  category_col = "vowel",
+  proportion_standardized = TRUE
+)
+```
+
+The default remains `FALSE`, so existing calls still return only `pillai` and
+`p_value`. Raw Pillai describes the categories in the realized speech data;
+the opt-in `pillai_eq` estimate characterizes the corresponding balanced-design
+system. The extended result also reports `d2_plugin`, `d2_unbiased`, the class
+counts and harmonic mean, and the finite-sample bias term.
+
+When the unbiased separation estimate is negative, `pillai_eq` is `NA` and the
+result sets `pillai_eq_fallback = TRUE`. The nonnegative fallback is reported
+only as `d2_fallback`, alongside its known upward bias; it is never silently
+mapped onto the corrected-score scale. This is a common outcome near merger,
+not an exceptional error case. These estimates assume multivariate normality
+within each category and a common within-category covariance, and no covariates
+or multicategory extension is performed.
+
 > `compare_overlap_metrics()` from phonJSD still works but is **deprecated**: it
 > now calls `phontrast()` with `output = "wide"`. Switch calls to `phontrast()`.
 

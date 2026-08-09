@@ -1,5 +1,19 @@
 # phontrast 2.3.1
 
+## Proportion-standardized Pillai estimates
+
+- Added the opt-in `proportion_standardized = TRUE` mode to
+  `pillai_overlap()`. It appends the plug-in and unbiased squared Mahalanobis
+  separation estimates and Becker's proportion-standardized Pillai score while
+  leaving the default two-field return and raw `pillai` value unchanged.
+- Negative unbiased separation estimates follow an explicitly labelled
+  fallback path: `pillai_eq` is `NA`, `pillai_eq_fallback` is `TRUE`, and the
+  multiplicatively corrected first term appears only as `d2_fallback` beside
+  its closed-form upward-bias term.
+- Added definedness and fragility diagnostics for the two-category,
+  no-covariate estimator chain, along with regression vectors, base-R MANOVA
+  comparisons, closed-form anchors, and null Monte-Carlo acceptance tests.
+
 ## CRAN resubmission fixes
 
 - Replaced the non-running `extract_mfcc()` example with a fast, executable
