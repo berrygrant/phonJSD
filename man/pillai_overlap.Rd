@@ -4,19 +4,79 @@
 \alias{pillai_overlap}
 \title{Pillai trace for multivariate overlap}
 \usage{
-pillai_overlap(data, features, category_col)
+pillai_overlap(data, features, category_col, proportion_standardized = FALSE)
 }
 \arguments{
 \item{data}{Data frame.}
 
 \item{features}{Character vector of numeric feature columns.}
 
-\item{category_col}{String; column giving categories (>= 2).}
+\item{category_col}{String; column giving exactly two categories.}
+
+\item{proportion_standardized}{Logical; if \code{TRUE}, append the plug-in and
+unbiased squared Mahalanobis separation estimates and the
+proportion-standardized Pillai score. The default, \code{FALSE}, preserves the
+original two-field return value.}
 }
 \value{
-A list with elements \code{pillai} and \code{p_value}.
+A list with elements \code{pillai} and \code{p_value}. When
+\code{proportion_standardized = TRUE}, the list additionally contains \code{n1},
+\code{n2}, \code{H}, \code{d2_plugin}, \code{d2_unbiased}, \code{pillai_eq},
+\code{pillai_eq_fallback}, \code{d2_fallback}, \code{bias_2p_over_H}, and
+\code{fragile_minority}. Counts follow the category factor-level order used by
+the model. On the fallback path, \code{pillai_eq} is \code{NA} and
+\code{d2_fallback} is labelled separately; off that path, \code{d2_fallback} is
+\code{NA}.
 }
 \description{
 Computes the Pillai-Bartlett trace from a MANOVA of features ~ category.
-This is a convenience wrapper for comparison with JSD.
+Optionally adds separation estimates and a proportion-standardized Pillai
+score for an exactly two-category, no-covariate design.
+}
+\details{
+With \code{proportion_standardized = FALSE}, the function returns the ordinary
+Pillai trace and its p-value exactly as before. Raw Pillai describes the
+categories in the realized data; the proportion-standardized score targets
+the balanced-design score for the same estimated underlying separation.
+
+For two categories with realized counts \eqn{n_1} and \eqn{n_2}, total
+\eqn{N}, \eqn{p} features, error degrees of freedom \eqn{\nu_e=N-2}, and
+\eqn{H=2n_1n_2/N}, the optional estimator chain is
+\deqn{\hat D^2 = 2\nu_e[V/(1-V)]/H,}
+\deqn{\tilde D^2 = [(\nu_e-p-1)/\nu_e]\hat D^2 - 2p/H,}
+followed, when \eqn{\tilde D^2 >= 0}, by
+\deqn{V_{eq}=\tilde D^2/(4+\tilde D^2).}
+The unbiased estimator is as given by Lachenbruch and Mickey (1968), and
+\eqn{V_{eq}} implements Becker's (1986) correction and his two-group
+multivariate generalization.
+
+If \eqn{\tilde D^2 < 0}, \code{pillai_eq} is \code{NA},
+\code{pillai_eq_fallback} is \code{TRUE}, and \code{d2_fallback} contains only the
+multiplicatively corrected first term. This common near-merger outcome is
+labelled separately because the fallback retains the split-dependent bias
+\code{bias_2p_over_H} and is not a balanced-design equivalent.
+
+The estimator chain assumes multivariate normality within each category and
+a common within-category covariance. It supports no covariates. Both
+categories must contain at least two complete tokens, and the within-class
+error SSCP must be nonsingular. When \eqn{\nu_e-p-1 <= 0}, all optional
+fields are returned as typed \code{NA} values with a warning. A minority category
+with fewer than \eqn{p+1} tokens remains computable but is flagged by
+\code{fragile_minority}.
+
+Because \eqn{x/(4+x)} is strictly concave, \code{pillai_eq} is slightly downward
+biased for the balanced-design target. This bias grows with the sampling
+variance of \eqn{\tilde D^2} and is largest for small, imbalanced,
+near-merged samples.
+}
+\references{
+Becker, G. (1986). Correcting the point-biserial correlation for attenuation
+owing to unequal sample size. \emph{Journal of Experimental Education}, 55(1),
+5-8.
+
+Lachenbruch, P. A., & Mickey, M. R. (1968). Estimation of error rates in
+discriminant analysis. \emph{Technometrics}, 10(1), 1-11.
+
+Berry, G. M. (2026). Beyond the null: Calibration, balance, and the
+interpretation of Pillai scores. Preprint.
 }

@@ -1,20 +1,95 @@
 #' Pillai trace for multivariate overlap
 #'
 #' Computes the Pillai-Bartlett trace from a MANOVA of features ~ category.
-#' This is a convenience wrapper for comparison with JSD.
+#' Optionally adds separation estimates and a proportion-standardized Pillai
+#' score for an exactly two-category, no-covariate design.
 #'
 #' @param data Data frame.
 #' @param features Character vector of numeric feature columns.
-#' @param category_col String; column giving categories (>= 2).
+#' @param category_col String; column giving exactly two categories.
+#' @param proportion_standardized Logical; if `TRUE`, append the plug-in and
+#'   unbiased squared Mahalanobis separation estimates and the
+#'   proportion-standardized Pillai score. The default, `FALSE`, preserves the
+#'   original two-field return value.
 #'
-#' @return A list with elements `pillai` and `p_value`.
+#' @details
+#' With `proportion_standardized = FALSE`, the function returns the ordinary
+#' Pillai trace and its p-value exactly as before. Raw Pillai describes the
+#' categories in the realized data; the proportion-standardized score targets
+#' the balanced-design score for the same estimated underlying separation.
+#'
+#' For two categories with realized counts \eqn{n_1} and \eqn{n_2}, total
+#' \eqn{N}, \eqn{p} features, error degrees of freedom \eqn{\nu_e=N-2}, and
+#' \eqn{H=2n_1n_2/N}, the optional estimator chain is
+#' \deqn{\hat D^2 = 2\nu_e[V/(1-V)]/H,}
+#' \deqn{\tilde D^2 = [(\nu_e-p-1)/\nu_e]\hat D^2 - 2p/H,}
+#' followed, when \eqn{\tilde D^2 >= 0}, by
+#' \deqn{V_{eq}=\tilde D^2/(4+\tilde D^2).}
+#' The unbiased estimator is as given by Lachenbruch and Mickey (1968), and
+#' \eqn{V_{eq}} implements Becker's (1986) correction and his two-group
+#' multivariate generalization.
+#'
+#' If \eqn{\tilde D^2 < 0}, `pillai_eq` is `NA`,
+#' `pillai_eq_fallback` is `TRUE`, and `d2_fallback` contains only the
+#' multiplicatively corrected first term. This common near-merger outcome is
+#' labelled separately because the fallback retains the split-dependent bias
+#' `bias_2p_over_H` and is not a balanced-design equivalent.
+#'
+#' The estimator chain assumes multivariate normality within each category and
+#' a common within-category covariance. It supports no covariates. Both
+#' categories must contain at least two complete tokens, and the within-class
+#' error SSCP must be nonsingular. When \eqn{\nu_e-p-1 <= 0}, all optional
+#' fields are returned as typed `NA` values with a warning. A minority category
+#' with fewer than \eqn{p+1} tokens remains computable but is flagged by
+#' `fragile_minority`.
+#'
+#' Because \eqn{x/(4+x)} is strictly concave, `pillai_eq` is slightly downward
+#' biased for the balanced-design target. This bias grows with the sampling
+#' variance of \eqn{\tilde D^2} and is largest for small, imbalanced,
+#' near-merged samples.
+#'
+#' @return A list with elements `pillai` and `p_value`. When
+#'   `proportion_standardized = TRUE`, the list additionally contains `n1`,
+#'   `n2`, `H`, `d2_plugin`, `d2_unbiased`, `pillai_eq`,
+#'   `pillai_eq_fallback`, `d2_fallback`, `bias_2p_over_H`, and
+#'   `fragile_minority`. Counts follow the category factor-level order used by
+#'   the model. On the fallback path, `pillai_eq` is `NA` and
+#'   `d2_fallback` is labelled separately; off that path, `d2_fallback` is
+#'   `NA`.
+#'
+#' @references
+#' Becker, G. (1986). Correcting the point-biserial correlation for attenuation
+#' owing to unequal sample size. *Journal of Experimental Education*, 55(1),
+#' 5-8.
+#'
+#' Lachenbruch, P. A., & Mickey, M. R. (1968). Estimation of error rates in
+#' discriminant analysis. *Technometrics*, 10(1), 1-11.
+#'
+#' Berry, G. M. (2026). Beyond the null: Calibration, balance, and the
+#' interpretation of Pillai scores. Preprint.
 #' @export
 #' @importFrom stats manova cov
-pillai_overlap <- function(data, features, category_col) {
+pillai_overlap <- function(data,
+                           features,
+                           category_col,
+                           proportion_standardized = FALSE) {
+  .check_bool(proportion_standardized, "proportion_standardized")
   .check_columns(data, c(category_col, features))
   data <- .metric_data(data, c(category_col, features))
   .check_numeric_features(data, features)
   .two_levels(data[[category_col]], "category_col")
+
+  standardized_counts <- NULL
+  if (proportion_standardized) {
+    standardized_counts <- .pillai_category_counts(data[[category_col]])
+    if (any(standardized_counts < 2L)) {
+      stop(
+        "Proportion-standardized Pillai estimates require at least two ",
+        "complete tokens in each category.",
+        call. = FALSE
+      )
+    }
+  }
 
   if (length(features) == 1L) {
     model_df <- data.frame(
@@ -31,12 +106,27 @@ pillai_overlap <- function(data, features, category_col) {
         )
       }
     )
+    if (proportion_standardized) {
+      .check_pillai_error_sscp(fit, length(features))
+    }
     aov_tab <- stats::anova(fit)
     ss_effect <- aov_tab[1, "Sum Sq"]
     ss_resid <- aov_tab[nrow(aov_tab), "Sum Sq"]
-    return(list(
+    result <- list(
       pillai = as.numeric(ss_effect / (ss_effect + ss_resid)),
       p_value = as.numeric(aov_tab[1, "Pr(>F)"])
+    )
+    if (!proportion_standardized) {
+      return(result)
+    }
+    return(c(
+      result,
+      .pillai_standardized_fields(
+        result$pillai,
+        standardized_counts[[1L]],
+        standardized_counts[[2L]],
+        length(features)
+      )
     ))
   }
 
@@ -58,6 +148,9 @@ pillai_overlap <- function(data, features, category_col) {
       )
     }
   )
+  if (proportion_standardized) {
+    .check_pillai_error_sscp(m, length(features))
+  }
   s <- tryCatch(
     summary(m, test = "Pillai"),
     error = function(e) {
@@ -69,9 +162,117 @@ pillai_overlap <- function(data, features, category_col) {
       )
     }
   )
-  list(
+  result <- list(
     pillai  = s$stats[1, "Pillai"],
     p_value = s$stats[1, "Pr(>F)"]
+  )
+  if (!proportion_standardized) {
+    return(result)
+  }
+  c(
+    result,
+    .pillai_standardized_fields(
+      result$pillai,
+      standardized_counts[[1L]],
+      standardized_counts[[2L]],
+      length(features)
+    )
+  )
+}
+
+.pillai_category_counts <- function(category) {
+  category <- category[!is.na(category)]
+  if (is.factor(category)) {
+    category <- droplevels(category)
+  } else {
+    category <- factor(category)
+  }
+  as.integer(table(category))
+}
+
+.check_pillai_error_sscp <- function(fit, p) {
+  residual_matrix <- as.matrix(stats::residuals(fit))
+  error_sscp <- crossprod(residual_matrix)
+  factorization <- tryCatch(
+    chol(error_sscp),
+    error = function(e) NULL
+  )
+  if (nrow(error_sscp) != p || ncol(error_sscp) != p ||
+      any(!is.finite(error_sscp)) || is.null(factorization)) {
+    stop(
+      "Proportion-standardized Pillai estimates require a nonsingular ",
+      "within-class error SSCP matrix; no ridge correction is applied.",
+      call. = FALSE
+    )
+  }
+  invisible(TRUE)
+}
+
+.pillai_standardized_na_fields <- function() {
+  list(
+    n1 = NA_integer_,
+    n2 = NA_integer_,
+    H = NA_real_,
+    d2_plugin = NA_real_,
+    d2_unbiased = NA_real_,
+    pillai_eq = NA_real_,
+    pillai_eq_fallback = NA,
+    d2_fallback = NA_real_,
+    bias_2p_over_H = NA_real_,
+    fragile_minority = NA
+  )
+}
+
+.pillai_standardized_fields <- function(V, n1, n2, p) {
+  if (!is.numeric(V) || length(V) != 1L || !is.finite(V) || V < 0 || V >= 1) {
+    stop("`V` must be a single finite Pillai score in [0, 1).", call. = FALSE)
+  }
+  .check_positive_count(n1, "n1")
+  .check_positive_count(n2, "n2")
+  .check_positive_count(p, "p")
+  if (n1 < 2L || n2 < 2L) {
+    stop("`n1` and `n2` must each be at least 2.", call. = FALSE)
+  }
+
+  n1 <- as.integer(n1)
+  n2 <- as.integer(n2)
+  p <- as.integer(p)
+  N <- n1 + n2
+  nu_e <- N - 2
+  if (nu_e - p - 1 <= 0) {
+    warning(
+      "Proportion-standardized Pillai estimates are undefined because ",
+      "nu_e - p - 1 <= 0 (N = ", N, ", p = ", p, "); all optional ",
+      "fields were returned as NA.",
+      call. = FALSE
+    )
+    return(.pillai_standardized_na_fields())
+  }
+
+  H <- 2 * n1 * n2 / N
+  pi1 <- n1 / N
+  theta_hat <- V / (1 - V)
+  d2_plugin <- nu_e * theta_hat / (N * pi1 * (1 - pi1))
+  first_term <- (nu_e - p - 1) / nu_e * d2_plugin
+  bias_2p_over_H <- 2 * p / H
+  d2_unbiased <- first_term - bias_2p_over_H
+  pillai_eq_fallback <- d2_unbiased < 0
+
+  list(
+    n1 = n1,
+    n2 = n2,
+    H = H,
+    d2_plugin = d2_plugin,
+    d2_unbiased = d2_unbiased,
+    pillai_eq = if (pillai_eq_fallback) {
+      NA_real_
+    } else {
+      d2_unbiased / (4 + d2_unbiased)
+    },
+    pillai_eq_fallback = pillai_eq_fallback,
+    d2_fallback = if (pillai_eq_fallback) first_term else NA_real_,
+    bias_2p_over_H = bias_2p_over_H,
+    fragile_minority = min(n1, n2) < p + 1L
   )
 }
 
