@@ -330,7 +330,7 @@ This package is not yet on CRAN. Install the latest tagged release with:
 
 ```r
 # install.packages("remotes")
-remotes::install_github("berrygrant/phontrast@v2.3.1")
+remotes::install_github("berrygrant/phontrast@v2.4.0")
 ```
 
 For the current development version, use:
