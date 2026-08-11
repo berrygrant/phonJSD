@@ -7,6 +7,7 @@ The package's entry point, `phontrast()`, computes and compares a family of metr
 
 > **Formerly `phonJSD`.** phontrast is the continuation of the `phonJSD` package (through v1.2.0), broadened from a Jensen–Shannon-divergence focus to a general multi-metric contrast toolkit. The estimators are unchanged; see [`NEWS.md`](NEWS.md) for migration notes, and `ROADMAP.md` in the repository for what's planned next.
 
+[![CRAN status](https://www.r-pkg.org/badges/version/phontrast)](https://CRAN.R-project.org/package=phontrast)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20816585.svg)](https://doi.org/10.5281/zenodo.20816585)
 
 ---
@@ -326,7 +327,13 @@ which is too few for KDE-based two-dimensional overlap estimates.
 
 ## Installation
 
-This package is not yet on CRAN. Install the latest tagged release with:
+Install the current stable release from CRAN:
+
+```r
+install.packages("phontrast")
+```
+
+To install the latest tagged GitHub release instead, use:
 
 ```r
 # install.packages("remotes")
