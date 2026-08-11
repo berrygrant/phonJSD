@@ -16,6 +16,11 @@
 
 # phontrast 2.3.1
 
+## CRAN release
+
+- Published on CRAN for the first time on 2026-08-09. The stable release is
+  available with `install.packages("phontrast")`.
+
 ## Proportion-standardized Pillai estimates
 
 - Added the opt-in `proportion_standardized = TRUE` mode to
