@@ -21,3 +21,4 @@
 ^\.ruff_cache(/|$)
 ^Rplots\.pdf$
 ^CRAN-SUBMISSION$
+^CITATION\.cff$
