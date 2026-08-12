@@ -1,4 +1,3 @@
-meta <- packageDescription("phontrast")
 version <- meta[["Version"]]
 
 version_dois <- c(
