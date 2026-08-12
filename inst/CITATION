@@ -1,10 +1,28 @@
+meta <- packageDescription("phontrast")
+version <- meta[["Version"]]
+
+version_dois <- c(
+  "2.3.1" = "10.5281/zenodo.21795954",
+  "2.4.0" = "10.5281/zenodo.21864533"
+)
+doi <- unname(version_dois[version])
+if (is.na(doi)) {
+  doi <- "10.5281/zenodo.20816585"
+}
+
 bibentry(
   bibtype = "Misc",
-  title = "phontrast: Contrast and Separation Metrics for Phonological Categories (v2.0.0)",
+  title = "phontrast: Contrast and Separation Metrics for Phonological Categories",
   author = person(given = c("Grant", "M."), family = "Berry"),
   year = "2026",
   publisher = "Zenodo",
-  doi = "10.5281/zenodo.20816585",
-  url = "https://doi.org/10.5281/zenodo.20816585",
-  textVersion = "Berry, Grant M. (2026). phontrast: Contrast and Separation Metrics for Phonological Categories (v2.0.0). Zenodo. https://doi.org/10.5281/zenodo.20816585"
+  version = version,
+  doi = doi,
+  url = paste0("https://doi.org/", doi),
+  note = paste("R package version", version),
+  textVersion = paste0(
+    "Berry, Grant M. (2026). phontrast: Contrast and Separation Metrics ",
+    "for Phonological Categories (Version ", version,
+    ") [Computer software]. Zenodo. https://doi.org/", doi
+  )
 )

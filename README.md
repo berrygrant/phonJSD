@@ -346,6 +346,15 @@ For the current development version, use:
 remotes::install_github("berrygrant/phontrast")
 ```
 
+## Citation
+
+To obtain the citation and BibTeX entry for the installed release, run:
+
+```r
+citation("phontrast")
+toBibtex(citation("phontrast"))
+```
+
 ## AI Use Disclosure
 
 OpenAI ChatGPT/Codex and Anthropic Claude Code assisted with code review, documentation drafting,

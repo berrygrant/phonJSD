@@ -1,0 +1,14 @@
+cff-version: 1.2.0
+message: "If you use phontrast in your work, please cite this software release."
+type: software
+title: "phontrast: Contrast and Separation Metrics for Phonological Categories"
+authors:
+  - family-names: Berry
+    given-names: Grant M.
+    affiliation: Villanova University
+version: 2.4.0
+doi: 10.5281/zenodo.21864533
+date-released: 2026-08-09
+url: "https://doi.org/10.5281/zenodo.21864533"
+repository-code: "https://github.com/berrygrant/phontrast"
+license: MIT

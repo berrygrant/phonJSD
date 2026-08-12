@@ -5,6 +5,9 @@
 - Corrected the package version in `DESCRIPTION` to 2.4.0. The original
   release tags contained the 2.4.0 changes but retained the 2.3.1 package
   metadata.
+- Replaced the citation that was frozen at v2.0.0 with version-aware package
+  citation metadata and the version-specific Zenodo DOI. Added `CITATION.cff`
+  so GitHub and future Zenodo deposits use the package's declared authorship.
 
 ## Proportion-standardized Pillai estimates
 
