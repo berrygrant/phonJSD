@@ -1,5 +1,11 @@
 # phontrast 2.4.0
 
+## Version metadata
+
+- Corrected the package version in `DESCRIPTION` to 2.4.0. The original
+  release tags contained the 2.4.0 changes but retained the 2.3.1 package
+  metadata.
+
 ## Proportion-standardized Pillai estimates
 
 - Added the opt-in `proportion_standardized = TRUE` mode to
