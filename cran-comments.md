@@ -26,7 +26,9 @@ version and citation metadata that users currently see.
 - Local: Ubuntu 24.04.4, R 4.3.3, `R CMD check --no-manual --timings`
   (offline build environment; the network-dependent CRAN incoming checks
   could not run there)
-- win-builder: R-devel and R-release, `R CMD check --as-cran`
+- R-hub v2 (GitHub Actions): Windows Server 2022, R-devel
+  (2026-08-19 r90430 ucrt); Ubuntu, R-devel — both `R CMD check` clean,
+  test suite 401 passing / 0 failures
 - GitHub Actions: Ubuntu latest, R release, `R CMD check --as-cran`
 
 ## R CMD check results
