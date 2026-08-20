@@ -2,16 +2,19 @@
 
 This is an update to the CRAN release `phontrast` 2.3.1.
 
-Version 2.4.0 is being submitted three days after 2.3.1 because it corrects
-release metadata that users currently see: the GitHub 2.4.0 tag initially
-retained `Version: 2.3.1`, and the package citation remained frozen at version
-2.0.0. The tag, package version, NEWS, version-specific Zenodo DOI, and
-version-aware package citation are now consistent.
+Version 2.4.0 corrects public release metadata and adds one opt-in feature.
+The 2.4.0 GitHub tag initially retained `Version: 2.3.1`, and the package
+citation remained frozen at version 2.0.0; the package version, NEWS, tag,
+version-specific Zenodo DOI, and version-aware citation are now consistent.
+If this update arrives close enough to 2.3.1 to trigger the
+days-since-last-update note, the short interval is to correct the public
+version and citation metadata that users currently see.
 
 ## Changes
 
 - Added the opt-in proportion-standardized Pillai estimates documented in
-  `NEWS.md`; existing defaults and the original return fields are unchanged.
+  `NEWS.md` (`pillai_overlap(proportion_standardized = TRUE)`); existing
+  defaults and the original return fields are unchanged.
 - Corrected the package version metadata to 2.4.0.
 - Replaced the stale citation with a version-aware citation for Grant M. Berry
   and the 2.4.0 Zenodo DOI <doi:10.5281/zenodo.21864533>.
@@ -20,23 +23,19 @@ version-aware package citation are now consistent.
 
 ## Test environments
 
-- Local: macOS 26.5.2 (aarch64-apple-darwin23), R 4.6.1,
-  `R CMD check --as-cran --no-manual`
-- GitHub Actions: Ubuntu latest, R release, `R CMD check`
+- Local: Ubuntu 24.04.4, R 4.3.3, `R CMD check --no-manual --timings`
+  (offline build environment; the network-dependent CRAN incoming checks
+  could not run there)
+- win-builder: R-devel and R-release, `R CMD check --as-cran`
+- GitHub Actions: Ubuntu latest, R release, `R CMD check --as-cran`
 
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
 
-The sole note is the expected incoming-check note:
+The sole local note is an example-timing note for `estimate_jsd`
+(6.2s elapsed) produced on a slow container; the example is unchanged from
+the accepted 2.3.1 release, which produced no timing note on CRAN hardware.
 
-```
-Days since last update: 3
-```
-
-The unusually short interval is necessary to correct the public package
-version and citation metadata described above.
-
-The local PDF-manual check could not run because the local TeX installation is
-missing `inconsolata.sty`. All Rd checks, examples, tests, vignettes, and the
-HTML manual check completed successfully.
+The local PDF-manual check was skipped (no TeX installation); all Rd checks,
+examples, tests, and vignettes completed successfully.
