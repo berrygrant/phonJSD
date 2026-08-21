@@ -1,3 +1,14 @@
+## Resubmission
+
+The previous 2.4.0 submission was flagged by the incoming pretest with one
+NOTE on the Windows flavor: the `estimate_jsd()` example exceeded 10s elapsed
+(38s). The example ran two two-dimensional bootstrap demonstrations whose
+per-resample multivariate bandwidth selection is slow on that platform. The
+example now demonstrates bootstrapping on a single feature (univariate
+bandwidth selection) and grouped estimation as a point estimate; it runs in
+well under one second on the test machines below. No other changes relative
+to the previous submission.
+
 ## Submission
 
 This is an update to the CRAN release `phontrast` 2.3.1.
@@ -35,9 +46,12 @@ version and citation metadata that users currently see.
 
 0 errors | 0 warnings | 1 note
 
-The sole local note is an example-timing note for `estimate_jsd`
-(6.2s elapsed) produced on a slow container; the example is unchanged from
-the accepted 2.3.1 release, which produced no timing note on CRAN hardware.
+The sole local note is environmental: the suggested package `tuneR` is not
+installable in the offline build container, so it was unavailable for
+checking there. It is available on CRAN's machines, and the previous
+submission's Debian pretest ran fully OK against the same Suggests list.
+After the example revision above, `estimate_jsd`'s example runs in 0.7s
+locally and no example exceeds the check timing thresholds.
 
 The local PDF-manual check was skipped (no TeX installation); all Rd checks,
 examples, tests, and vignettes completed successfully.

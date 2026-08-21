@@ -115,17 +115,17 @@ vowels <- data.frame(
   )
 )
 
-# Point estimate of JSD (fast).
+# Point estimate of JSD (fast), globally and by speaker.
 estimate_jsd(
   data = vowels,
   features = c("f1", "f2"),
   category_col = "vowel"
 )
+estimate_jsd(vowels, c("f1", "f2"), "vowel", group_col = "speaker")
 
-# Bootstrap confidence intervals, global and by speaker.
-# Increase n_boot for real analyses.
-estimate_jsd(vowels, c("f1", "f2"), "vowel",
-             do_boot = TRUE, n_boot = 10)
-estimate_jsd(vowels, c("f1", "f2"), "vowel", group_col = "speaker",
-             do_boot = TRUE, n_boot = 10)
+# Bootstrap confidence intervals, shown on a single feature: multivariate
+# bootstraps work the same way but repeat multivariate bandwidth selection
+# on every resample, so they take correspondingly longer. Increase n_boot
+# for real analyses.
+estimate_jsd(vowels, "f1", "vowel", do_boot = TRUE, n_boot = 20)
 }
