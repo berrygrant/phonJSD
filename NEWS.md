@@ -1,3 +1,19 @@
+# phontrast 2.4.1
+
+## Cross-BLAS robustness of the proportion-standardized Pillai guard
+
+- Fixed the test failure reported by CRAN's tests-MKL additional check. The
+  nonsingularity guard for proportion-standardized Pillai estimates decided
+  rank deficiency by whether `chol()` of the within-class error SSCP threw an
+  error, which is BLAS-dependent on (near-)singular input: reference LAPACK
+  errors where Intel MKL can return a tiny positive pivot, letting degenerate
+  designs slip past the guard and fail later inside `summary.manova()` with a
+  less specific message. The guard now decides rank by R's tolerance-based QR
+  of the residual matrix -- the same criterion `summary.manova()` applies --
+  so degenerate designs raise the documented "nonsingular" error on every
+  BLAS build. Estimates on well-posed designs are unchanged.
+- Added a near-collinear regression test that pins this behavior.
+
 # phontrast 2.4.0
 
 ## Version metadata

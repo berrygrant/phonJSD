@@ -193,12 +193,20 @@ pillai_overlap <- function(data,
 .check_pillai_error_sscp <- function(fit, p) {
   residual_matrix <- as.matrix(stats::residuals(fit))
   error_sscp <- crossprod(residual_matrix)
-  factorization <- tryCatch(
-    chol(error_sscp),
-    error = function(e) NULL
-  )
-  if (nrow(error_sscp) != p || ncol(error_sscp) != p ||
-      any(!is.finite(error_sscp)) || is.null(factorization)) {
+  # Rank deficiency is decided by R's tolerance-based QR of the residual
+  # matrix -- the same criterion summary.manova() applies -- rather than by
+  # whether chol() happens to throw. On exactly singular input, chol()
+  # failure is BLAS-dependent: reference LAPACK errors where MKL can return
+  # a tiny positive pivot, which let degenerate designs slip past this guard
+  # and fail later with a less specific message (CRAN's tests-MKL additional
+  # check caught exactly that). The thresholded rank decision has orders of
+  # magnitude of margin on such designs, so it is stable across BLAS builds.
+  degenerate <- nrow(error_sscp) != p || ncol(error_sscp) != p ||
+    any(!is.finite(error_sscp))
+  if (!degenerate) {
+    degenerate <- qr(residual_matrix)$rank < p
+  }
+  if (degenerate) {
     stop(
       "Proportion-standardized Pillai estimates require a nonsingular ",
       "within-class error SSCP matrix; no ridge correction is applied.",

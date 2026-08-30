@@ -247,6 +247,23 @@ test_that("definedness and design failures are explicit", {
     "nonsingular"
   )
 
+  # Near-collinear features must fail the same way. The guard decides rank by
+  # tolerance-based QR (with orders of magnitude of margin here), not by
+  # whether chol() throws -- the latter differs between BLAS builds on
+  # (near-)singular input, which is what CRAN's tests-MKL check tripped on.
+  near_singular <- singular
+  near_singular$f2 <- near_singular$f2 +
+    1e-9 * c(1, -1, 2, -2, 3, -3, 4, -4, 5, -5)
+  expect_error(
+    pillai_overlap(
+      near_singular,
+      c("f1", "f2"),
+      "category",
+      proportion_standardized = TRUE
+    ),
+    "nonsingular"
+  )
+
   three_classes <- data.frame(
     category = rep(c("a", "b", "c"), each = 4),
     f1 = seq_len(12)
