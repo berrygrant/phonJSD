@@ -337,7 +337,7 @@ To install the latest tagged GitHub release instead, use:
 
 ```r
 # install.packages("remotes")
-remotes::install_github("berrygrant/phontrast@v2.4.0")
+remotes::install_github("berrygrant/phontrast@v2.4.1")
 ```
 
 For the current development version, use:
